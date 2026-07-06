@@ -16,7 +16,7 @@ venv.bak/
 # IDEs
 .vscode/
 .idea/
- .agents
+.agents/
 # Distribution / packaging
 dist/
 build/
