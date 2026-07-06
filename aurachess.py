@@ -245,16 +245,34 @@ class TrainerFrame(ctk.CTkFrame):
                 return
                 
             self.status.configure(text=f"Found {len(self.cards)} opening mistakes to review.")
+            self.card_index = 0
+            self.show_card()
+            
+        except Exception as e:
+            self.status.configure(text=f"Error loading flashcards: {e}")
+
+    def show_card(self):
+        try:
+            if not hasattr(self, 'cards'): return
             
             for widget in self.board_container.winfo_children():
                 widget.destroy()
                 
-            # Launch first card
-            card = self.cards[0]
+            if self.card_index >= len(self.cards):
+                self.status.configure(text="You've finished your daily review!")
+                return
+                
+            card = self.cards[self.card_index]
+            self.status.configure(text=f"Reviewing {self.card_index + 1} / {len(self.cards)}")
+            
+            def on_next():
+                self.card_index += 1
+                self.show_card()
+                
             ChessGUI(self.board_container, mode="Trainer", epd=card["epd"], 
-                     correct_move=card["correct_move"], user_move=card["user_move"])
+                     correct_move=card["correct_move"], user_move=card["user_move"], on_next=on_next)
         except Exception as e:
-            self.status.configure(text=f"Error loading flashcards: {e}")
+            self.status.configure(text=f"Error loading flashcard: {e}")
 
 if __name__ == "__main__":
     ctk.set_appearance_mode("Dark")

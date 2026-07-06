@@ -1,23 +1,29 @@
-# Python Chess Engine
+# AuraChess (v3.0)
 
 **Created by Abdulazizxon Saydaliyev**
 
-A fully-functional, ultra-fast Python chess engine powered by Cython C-extensions with a custom Tkinter Graphical User Interface.
+A fully-functional, ultra-fast Python chess engine powered by Cython C-extensions, integrated with a Spaced Repetition Aura Auto-Trainer.
+
+![Aura Trainer](images/aura-trainer.png)
 
 ## Features
-* **Cython-Optimized Core**: The engine's core math logic is statically typed and compiled into C (`.so` extensions) for massive performance gains, effortlessly supporting search depths from 1 to 8.
+
+### 🚀 Aura Auto-Trainer (Spaced Repetition)
+The app features an offline Spaced Repetition engine that mines your actual game history and tests you on your blunders.
+* **The Intelligence Miner**: Downloads your recent games from Chess.com and cross-references your opening moves against the offline `komodo.bin` Grandmaster Opening Book.
+* **Personalized Flashcards**: Automatically detects if you play a move that violates Grandmaster theory, isolating that exact position and generating a personalized flashcard.
+* **Spaced Repetition Hub**: Drops you right into the exact position on the board where you previously made a mistake. You are forced to figure out the *correct* Grandmaster move to advance.
+
+### ⚡ Cython-Optimized Core
+* The engine's core math logic is statically typed and compiled into C (`.so` extensions) for massive performance gains, effortlessly supporting search depths from 1 to 8.
 * **Algorithmic Intelligence**: Implements Alpha-Beta Negamax search, MVV-LVA move ordering, and Quiescence Search to prevent horizon-effect blunders.
-* **Positional & Theoretical Mastery**: 
-  * Uses PeSTO's Piece-Square Tables for strong positional and developmental understanding.
-  * Integrated Polyglot Opening Book (`komodo.bin`) for Grandmaster-level variety and theoretical play in the opening phase.
-* **Modern GUI**: Built natively in Tkinter, featuring:
-  * Smooth drag-and-drop piece movement (and click-to-move fallback)
-  * Scrollable Move History sidebar with standard algebraic notation
-  * Dynamic Evaluation bar showing real-time engine advantage
-  * Interactive arrows (right-click and drag) and square highlights (right-click)
-  * Visual indicators for legal moves and captures
-  * "Flip Sides" feature to play as Black (automatically inverts coordinates and UI)
-  * Undo and Restart functionality
+* **Positional Mastery**: Uses PeSTO's Piece-Square Tables for strong positional and developmental understanding.
+
+### 🎨 Modern Dashboard GUI
+* Built natively in `customtkinter` with a dark mode, premium aesthetic.
+* **PGN Analyzer**: Paste PGNs to analyze games against the Cython engine.
+* **Move History & Real-Time Eval**: Scrollable history with standard algebraic notation and dynamic evaluation bars showing real-time engine advantage.
+* **Aura Coach**: Real-time blunder prevention during games that triggers UI warnings when you make a game-losing move.
 
 ## Prerequisites
 * Python 3.8+
@@ -47,12 +53,14 @@ A fully-functional, ultra-fast Python chess engine powered by Cython C-extension
    python3 setup.py build_ext --inplace
    ```
 
-## Running the Game
+## Running the App
 
-To launch the GUI and play against the engine:
+To launch the full AuraChess dashboard:
 ```bash
-python3 gui.py
+python3 aurachess.py
 ```
 
-## Graphics
-The engine uses custom PNG piece sets loaded automatically from the local `images/` directory. If the folder is missing, the GUI will gracefully fall back to using standard Unicode chess characters to render the board.
+To update your Spaced Repetition flashcards with your latest games:
+```bash
+python3 theory_analyzer.py
+```
