@@ -25,7 +25,7 @@ class ChessGUI:
     def __init__(self, root, mode="PvB"):
         self.root = root
         self.mode = mode
-        mode_title = "Play vs Bot" if mode == "PvB" else "2 Player Local" if mode == "PvP" else "Bot vs Bot Simulation"
+        mode_title = "Play vs Bot" if mode == "PvB" else "2 Player Local" if mode == "PvP" else "Bot vs Bot Simulation" if mode == "BvB" else "Play vs Myself"
         self.root.title(f"Abdulazizxon's Chess Engine - {mode_title}")
         
         self.board = chess.Board()
@@ -55,6 +55,13 @@ class ChessGUI:
                 self.openings_db = json.load(f)
         except Exception as e:
             print(f"Could not load openings database: {e}")
+            
+        self.user_book = {}
+        try:
+            with open(os.path.join(os.path.dirname(__file__), "data", "user_book.json"), "r") as f:
+                self.user_book = json.load(f)
+        except Exception as e:
+            print(f"Could not load user book: {e}")
         
         # Root layout
         self.main_container = tk.Frame(self.root)
@@ -87,7 +94,7 @@ class ChessGUI:
         self.restart_btn = tk.Button(self.controls, text="Restart", command=self.restart_game, width=6)
         self.restart_btn.pack(side=tk.LEFT, padx=(2, 2))
         
-        if self.mode == "PvB":
+        if self.mode in ["PvB", "PvM"]:
             self.switch_btn = tk.Button(self.controls, text="Flip Sides", command=self.switch_sides, width=8)
             self.switch_btn.pack(side=tk.LEFT, padx=(2, 10))
             tk.Label(self.controls, text="Depth:").pack(side=tk.LEFT)
@@ -203,7 +210,7 @@ class ChessGUI:
 
     def switch_sides(self):
         self.player_color = chess.BLACK if self.player_color == chess.WHITE else chess.WHITE
-        if self.mode == "PvB":
+        if self.mode in ["PvB", "PvM"]:
             self.restart_game()
         else:
             self.draw_board()
@@ -214,7 +221,7 @@ class ChessGUI:
             if self.bvb_running:
                 self.sim_btn.config(text="Resume Sim")
         
-        if self.mode == "PvB":
+        if self.mode in ["PvB", "PvM"]:
             if len(self.board.move_stack) >= 2:
                 self.board.pop()
                 self.board.pop()
@@ -242,7 +249,7 @@ class ChessGUI:
             
         self.clear_markup()
         self.draw_board()
-        if self.mode == "PvB" and self.player_color == chess.BLACK:
+        if self.mode in ["PvB", "PvM"] and self.player_color == chess.BLACK:
             self.root.after(50, self.engine_move)
         
     def clear_markup(self):
@@ -293,7 +300,7 @@ class ChessGUI:
             
         self.clear_markup()
         
-        if self.mode == "PvB":
+        if self.mode in ["PvB", "PvM"]:
             if self.board.turn != self.player_color or self.board.is_game_over(claim_draw=True):
                 self.draw_board()
                 return
@@ -352,7 +359,7 @@ class ChessGUI:
             self.root.update()
             
             if not self.board.is_game_over(claim_draw=True):
-                if self.mode == "PvB":
+                if self.mode in ["PvB", "PvM"]:
                     self.root.after(50, self.engine_move)
             return True
         return False
@@ -387,7 +394,23 @@ class ChessGUI:
         
         import time
         start_time = time.time()
-        move = get_best_move(self.board, depth=depth)
+        
+        move = None
+        if self.mode == "PvM":
+            epd = self.board.epd()
+            if epd in self.user_book:
+                import random
+                rand_val = random.random()
+                cumulative = 0
+                for uci, prob in self.user_book[epd].items():
+                    cumulative += prob
+                    if rand_val <= cumulative:
+                        move = chess.Move.from_uci(uci)
+                        break
+                        
+        if not move:
+            move = get_best_move(self.board, depth=depth)
+            
         calc_time = time.time() - start_time
         
         delay_ms = 0
@@ -413,7 +436,7 @@ class ChessGUI:
             self.sim_btn.config(state=tk.NORMAL)
             self.w_menu.config(state=tk.NORMAL)
             self.b_menu.config(state=tk.NORMAL)
-        elif self.mode == "PvB":
+        elif self.mode in ["PvB", "PvM"]:
             self.switch_btn.config(state=tk.NORMAL)
             self.diff_menu.config(state=tk.NORMAL)
             
@@ -621,9 +644,10 @@ class StartupMenu:
     def __init__(self, r):
         self.r = r
         self.r.title("Chess Engine Menu")
-        self.r.geometry("400x400")
+        self.r.geometry("400x500")
         tk.Label(r, text="Select Game Mode", font=("Arial", 24, "bold")).pack(pady=40)
         tk.Button(r, text="Play vs Bot", font=("Arial", 16), width=20, height=2, command=lambda: self.launch("PvB")).pack(pady=10)
+        tk.Button(r, text="Play vs Myself", font=("Arial", 16), width=20, height=2, command=lambda: self.launch("PvM")).pack(pady=10)
         tk.Button(r, text="2 Player Local", font=("Arial", 16), width=20, height=2, command=lambda: self.launch("PvP")).pack(pady=10)
         tk.Button(r, text="Bot vs Bot Simulation", font=("Arial", 16), width=20, height=2, command=lambda: self.launch("BvB")).pack(pady=10)
         
