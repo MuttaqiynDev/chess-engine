@@ -319,7 +319,22 @@ class ChessGUI:
         self.restart_btn.config(state=tk.DISABLED)
         self.root.update()
         
+        import time
+        start_time = time.time()
         move = get_best_move(self.board, depth=depth)
+        calc_time = time.time() - start_time
+        
+        delay_ms = 0
+        if self.mode == "BvB":
+            if calc_time < 1.5:
+                delay_ms = int((1.5 - calc_time) * 1000)
+                
+        if delay_ms > 0:
+            self.root.after(delay_ms, lambda: self.finish_engine_move(move))
+        else:
+            self.finish_engine_move(move)
+
+    def finish_engine_move(self, move):
         if move:
             self.board.push(move)
             
