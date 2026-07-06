@@ -372,6 +372,9 @@ class ChessGUI:
         return False
 
     def engine_move(self):
+        if getattr(self, "engine_thinking", False):
+            return
+            
         if self.board.is_game_over(claim_draw=True):
             self.bvb_running = False
             if self.mode == "BvB": self.sim_btn.config(text="Start Sim", state=tk.NORMAL)
@@ -392,60 +395,71 @@ class ChessGUI:
             self.b_menu.config(state=tk.DISABLED)
         else:
             depth = self.difficulty.get()
-            self.switch_btn.config(state=tk.DISABLED)
-            self.diff_menu.config(state=tk.DISABLED)
+            if hasattr(self, "switch_btn"):
+                self.switch_btn.config(state=tk.DISABLED)
+            if hasattr(self, "diff_menu"):
+                self.diff_menu.config(state=tk.DISABLED)
             
-        self.undo_btn.config(state=tk.DISABLED)
-        self.restart_btn.config(state=tk.DISABLED)
+        self.engine_thinking = True
         self.root.update()
         
-        import time
-        start_time = time.time()
+        board_copy = self.board.copy()
+        target_epd = self.board.epd()
         
-        move = None
-        if self.mode == "PvM":
-            epd = self.board.epd()
-            if epd in self.user_book:
-                import random
-                rand_val = random.random()
-                cumulative = 0
-                for uci, prob in self.user_book[epd].items():
-                    cumulative += prob
-                    if rand_val <= cumulative:
-                        move = chess.Move.from_uci(uci)
-                        break
-                        
-        if not move:
-            move = get_best_move(self.board, depth=depth)
+        def calc_thread():
+            import time
+            start_time = time.time()
             
-        calc_time = time.time() - start_time
-        
-        delay_ms = 0
-        if self.mode == "BvB":
-            if calc_time < 0.5:
-                delay_ms = int((0.5 - calc_time) * 1000)
+            move = None
+            if self.mode == "PvM":
+                epd = board_copy.epd()
+                if epd in self.user_book:
+                    import random
+                    rand_val = random.random()
+                    cumulative = 0
+                    for uci, prob in self.user_book[epd].items():
+                        cumulative += prob
+                        if rand_val <= cumulative:
+                            move = chess.Move.from_uci(uci)
+                            break
+                            
+            if not move:
+                move = get_best_move(board_copy, depth=depth)
                 
-        if delay_ms > 0:
-            self.root.after(delay_ms, lambda: self.finish_engine_move(move))
-        else:
-            self.finish_engine_move(move)
+            calc_time = time.time() - start_time
+            
+            delay_ms = 0
+            if self.mode == "BvB":
+                if calc_time < 0.5:
+                    delay_ms = int((0.5 - calc_time) * 1000)
+                    
+            if delay_ms > 0:
+                self.root.after(delay_ms, lambda: self.finish_engine_move(move, target_epd))
+            else:
+                self.root.after(0, lambda: self.finish_engine_move(move, target_epd))
 
-    def finish_engine_move(self, move):
+        import threading
+        threading.Thread(target=calc_thread, daemon=True).start()
+
+    def finish_engine_move(self, move, target_epd):
+        self.engine_thinking = False
+        
+        # State Validator: If board changed while thinking (e.g. undo clicked), drop the move
+        if self.board.epd() != target_epd:
+            return
+            
         if move and move in self.board.legal_moves:
             self.board.push(move)
-        elif move:
-            return # Ignore if a race condition fed an illegal move
             
-        self.undo_btn.config(state=tk.NORMAL)
-        self.restart_btn.config(state=tk.NORMAL)
-        
         if self.mode == "BvB":
             self.sim_btn.config(state=tk.NORMAL)
             self.w_menu.config(state=tk.NORMAL)
             self.b_menu.config(state=tk.NORMAL)
         elif self.mode in ["PvB", "PvM"]:
-            self.switch_btn.config(state=tk.NORMAL)
-            self.diff_menu.config(state=tk.NORMAL)
+            if hasattr(self, "switch_btn"):
+                self.switch_btn.config(state=tk.NORMAL)
+            if hasattr(self, "diff_menu"):
+                self.diff_menu.config(state=tk.NORMAL)
             
         self.draw_board()
         if self.board.is_game_over(claim_draw=True):
