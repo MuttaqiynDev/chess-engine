@@ -74,7 +74,7 @@ class ChessGUI:
         self.switch_btn.pack(side=tk.LEFT, padx=(5, 20))
         
         tk.Label(self.controls, text="Difficulty (Depth):").pack(side=tk.LEFT, padx=(10, 5))
-        self.diff_menu = tk.OptionMenu(self.controls, self.difficulty, 1, 2, 3, 4)
+        self.diff_menu = tk.OptionMenu(self.controls, self.difficulty, 1, 2, 3, 4, 5, 6, 7, 8)
         self.diff_menu.pack(side=tk.LEFT)
         
         # --- RIGHT FRAME (Move History) ---
