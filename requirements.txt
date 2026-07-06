@@ -1,0 +1,5 @@
+pytest
+chess
+pygame
+requests
+Pillow
