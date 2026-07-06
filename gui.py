@@ -23,15 +23,21 @@ PIECE_NAMES = {
 PIECE_IMAGES = {}
 
 class ChessGUI:
-    def __init__(self, root, mode="PvB"):
+    def __init__(self, root, mode="PvB", **kwargs):
         self.root = root
         self.mode = mode
+        self.kwargs = kwargs
         try:
-            self.root.title(f"Abdulazizxon's Chess Engine - {mode_title}")
+            self.root.title("AuraChess")
         except AttributeError:
             pass # Embedded in a CTKFrame
         
         self.board = chess.Board()
+        if self.mode == "Trainer":
+            epd = kwargs.get("epd", "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -")
+            self.board.set_epd(epd)
+            self.correct_move = kwargs.get("correct_move", "")
+            self.user_move = kwargs.get("user_move", "")
         self.selected_sq = None
         self.view_index = -1 # -1 means live
         
@@ -157,7 +163,8 @@ class ChessGUI:
         self.black_time = 600.0
         self.clock_running = False
         self.last_time = time.time()
-        self.update_clock()
+        if self.mode != "Trainer":
+            self.update_clock()
         
         self.prev_btn = tk.Button(self.nav_frame, text="<", command=self.view_prev, width=5)
         self.prev_btn.pack(side=tk.LEFT, padx=(10, 5), pady=5)
@@ -452,6 +459,16 @@ class ChessGUI:
                 
         legal_moves = self.board.legal_moves
         if move in legal_moves:
+            if self.mode == "Trainer":
+                if move.uci() == self.correct_move:
+                    self.show_blunder_warning(f"Correct!\\nTheory move is {self.correct_move}")
+                else:
+                    self.show_blunder_warning(f"Incorrect.\\nYou played {self.user_move}\\nGM move: {self.correct_move}")
+                self.selected_sq = None
+                self.dragged_piece = None
+                self.draw_board()
+                return False
+                
             if self.coach_enabled.get():
                 from quiescence import quiescence_search
                 import os
@@ -818,9 +835,9 @@ class ChessGUI:
             self.bottom_clock_lbl.config(text=b_text)
             self.top_clock_lbl.config(text=w_text)
             
-    def show_blunder_warning(self):
-        self.canvas.create_rectangle(120, 260, 520, 380, fill="#2b2b2b", outline="#ff4757", width=4, tags="blunder_warning")
-        self.canvas.create_text(320, 320, text="Aura Coach:\\nBlunder Prevented!", fill="#ff4757", font=("Helvetica", 28, "bold"), justify="center", tags="blunder_warning")
+    def show_blunder_warning(self, msg="Aura Coach:\\nBlunder Prevented!"):
+        self.canvas.create_rectangle(100, 240, 540, 400, fill="#2b2b2b", outline="#ff4757", width=4, tags="blunder_warning")
+        self.canvas.create_text(320, 320, text=msg, fill="#ff4757", font=("Helvetica", 24, "bold"), justify="center", tags="blunder_warning")
         self.root.after(2000, lambda: self.canvas.delete("blunder_warning"))
 
 app_state = {"mode": None}

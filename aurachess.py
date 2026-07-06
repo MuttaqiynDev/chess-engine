@@ -37,10 +37,14 @@ class AuraChess(ctk.CTk):
         self.analyze_btn = ctk.CTkButton(self.sidebar_frame, text="PGN Analyzer", command=self.show_analyzer)
         self.analyze_btn.grid(row=5, column=0, padx=20, pady=10)
         
+        self.trainer_btn = ctk.CTkButton(self.sidebar_frame, text="Aura Trainer", command=self.show_trainer)
+        self.trainer_btn.grid(row=6, column=0, padx=20, pady=10)
+        
         # Frames
         self.dashboard_frame = DashboardFrame(self, self)
         self.play_frame = ctk.CTkFrame(self, corner_radius=0, fg_color="transparent")
         self.analyzer_frame = AnalyzerFrame(self, self)
+        self.trainer_frame = TrainerFrame(self, self)
         
         # Default
         self.current_frame = None
@@ -70,6 +74,9 @@ class AuraChess(ctk.CTk):
             self.current_frame = self.play_frame
         elif name == "analyze":
             self.current_frame = self.analyzer_frame
+        elif name == "trainer":
+            self.current_frame = self.trainer_frame
+            self.trainer_frame.load_cards()
             
         self.current_frame.grid(row=0, column=1, sticky="nsew")
 
@@ -78,6 +85,7 @@ class AuraChess(ctk.CTk):
     def show_pvm(self): self.select_frame_by_name("pvm")
     def show_pvp(self): self.select_frame_by_name("pvp")
     def show_analyzer(self): self.select_frame_by_name("analyze")
+    def show_trainer(self): self.select_frame_by_name("trainer")
 
 
 class DashboardFrame(ctk.CTkFrame):
@@ -205,6 +213,48 @@ class AnalyzerFrame(ctk.CTkFrame):
         canvas = FigureCanvasTkAgg(fig, master=self.graph_frame)
         canvas.draw()
         canvas.get_tk_widget().pack(fill="both", expand=True)
+
+class TrainerFrame(ctk.CTkFrame):
+    def __init__(self, parent, controller):
+        super().__init__(parent, corner_radius=0, fg_color="transparent")
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_rowconfigure(1, weight=1)
+        
+        self.title = ctk.CTkLabel(self, text="Aura Auto-Trainer (Spaced Repetition)", font=ctk.CTkFont(size=24, weight="bold"))
+        self.title.grid(row=0, column=0, padx=20, pady=20)
+        
+        self.content = ctk.CTkFrame(self)
+        self.content.grid(row=1, column=0, padx=40, pady=20, sticky="nsew")
+        
+        self.status = ctk.CTkLabel(self.content, text="Loading mistakes...", font=ctk.CTkFont(size=16))
+        self.status.pack(pady=(20, 5))
+        
+        self.refresh_btn = ctk.CTkButton(self.content, text="Refresh Flashcards", command=self.load_cards)
+        self.refresh_btn.pack(pady=(0, 20))
+        
+        self.board_container = ctk.CTkFrame(self.content, fg_color="transparent")
+        self.board_container.pack(fill="both", expand=True)
+        
+    def load_cards(self):
+        try:
+            with open(os.path.join(os.path.dirname(__file__), "data", "flashcards.json"), "r") as f:
+                self.cards = json.load(f)
+                
+            if not self.cards:
+                self.status.configure(text="No mistakes found! Run theory_analyzer.py")
+                return
+                
+            self.status.configure(text=f"Found {len(self.cards)} opening mistakes to review.")
+            
+            for widget in self.board_container.winfo_children():
+                widget.destroy()
+                
+            # Launch first card
+            card = self.cards[0]
+            ChessGUI(self.board_container, mode="Trainer", epd=card["epd"], 
+                     correct_move=card["correct_move"], user_move=card["user_move"])
+        except Exception as e:
+            self.status.configure(text=f"Error loading flashcards: {e}")
 
 if __name__ == "__main__":
     ctk.set_appearance_mode("Dark")
