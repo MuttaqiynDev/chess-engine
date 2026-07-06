@@ -1,7 +1,11 @@
 import chess
+import chess.polyglot
+import os
 from evaluate import evaluate
 from quiescence import quiescence_search
 from ordering import order_moves
+
+BOOK_PATH = os.path.join(os.path.dirname(__file__), "data", "komodo.bin")
 
 def negamax(board, depth, alpha, beta):
     if board.is_game_over():
@@ -34,5 +38,18 @@ def negamax(board, depth, alpha, beta):
 
 def get_best_move(board, depth=4):
     """Returns the best move found within the given depth."""
+    # 1. Consult the Opening Book first
+    if os.path.exists(BOOK_PATH):
+        try:
+            with chess.polyglot.open_reader(BOOK_PATH) as reader:
+                entry = reader.weighted_choice(board)
+                return entry.move
+        except IndexError:
+            # Position not in book
+            pass
+        except Exception as e:
+            print(f"Book error: {e}")
+            
+    # 2. Standard Alpha-Beta Search
     val, move = negamax(board, depth, -999999, 999999)
     return move
