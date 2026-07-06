@@ -1,0 +1,72 @@
+[
+    {
+        "epd": "r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq -",
+        "user_move": "f1c4",
+        "correct_move": "f1b5",
+        "interval": 1,
+        "next_review": 0
+    },
+    {
+        "epd": "rnbqkbnr/pppppppp/8/8/8/2P5/PP1PPPPP/RNBQKBNR b KQkq -",
+        "user_move": "c7c5",
+        "correct_move": "g8f6",
+        "interval": 1,
+        "next_review": 0
+    },
+    {
+        "epd": "rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq -",
+        "user_move": "c2c3",
+        "correct_move": "g1f3",
+        "interval": 1,
+        "next_review": 0
+    },
+    {
+        "epd": "rnbqkbnr/pp1ppppp/8/2p5/4P3/2N5/PPPP1PPP/R1BQKBNR b KQkq -",
+        "user_move": "b8c6",
+        "correct_move": "d7d6",
+        "interval": 1,
+        "next_review": 0
+    },
+    {
+        "epd": "rnb1kbnr/pp2pppp/8/2pq4/8/2P5/PP1P1PPP/RNBQKBNR w KQkq -",
+        "user_move": "g1f3",
+        "correct_move": "d2d4",
+        "interval": 1,
+        "next_review": 0
+    },
+    {
+        "epd": "rnbqkbnr/ppp2ppp/4p3/3p4/3PP3/8/PPP2PPP/RNBQKBNR w KQkq -",
+        "user_move": "e4e5",
+        "correct_move": "b1c3",
+        "interval": 1,
+        "next_review": 0
+    },
+    {
+        "epd": "rnbqkbnr/pp1ppppp/8/2p5/2B1P3/8/PPPP1PPP/RNBQK1NR b KQkq -",
+        "user_move": "e7e6",
+        "correct_move": "b8c6",
+        "interval": 1,
+        "next_review": 0
+    },
+    {
+        "epd": "rnbqkbnr/pp2pppp/3p4/2p5/2B1P3/5N2/PPPP1PPP/RNBQK2R b KQkq -",
+        "user_move": "a7a6",
+        "correct_move": "g8f6",
+        "interval": 1,
+        "next_review": 0
+    },
+    {
+        "epd": "r1bq1rk1/pppp1ppp/2n2n2/2b1p3/2B1P3/2PP1N2/PP3PPP/RNBQK2R w KQ -",
+        "user_move": "b2b4",
+        "correct_move": "e1g1",
+        "interval": 1,
+        "next_review": 0
+    },
+    {
+        "epd": "rnbqkbnr/pp1p1ppp/4p3/2p5/2B1P3/5N2/PPPP1PPP/RNBQK2R b KQkq -",
+        "user_move": "d7d5",
+        "correct_move": "b8c6",
+        "interval": 1,
+        "next_review": 0
+    }
+]

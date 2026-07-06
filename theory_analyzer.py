@@ -25,14 +25,19 @@ def fetch_games(username):
         data = json.loads(response.read().decode('utf-8'))
         return data['games']
 
-def get_master_moves(epd):
-    url = f"https://explorer.lichess.ovh/masters?fen={urllib.parse.quote(epd)}"
-    req = urllib.request.Request(url, headers={"User-Agent": "AuraChess/1.0"})
+import chess.polyglot
+
+def get_master_move(board):
+    BOOK_PATH = "data/komodo.bin"
+    if not os.path.exists(BOOK_PATH): return None
     try:
-        with urllib.request.urlopen(req, context=ctx) as response:
-            return json.loads(response.read().decode('utf-8'))
-    except:
-        return None
+        with chess.polyglot.open_reader(BOOK_PATH) as reader:
+            entries = list(reader.find_all(board))
+            if entries:
+                return entries[0].move.uci()
+    except Exception as e:
+        print("Book error:", e)
+    return None
 
 def build_flashcards():
     username = "AbdulazizxonChess"
@@ -73,30 +78,20 @@ def build_flashcards():
                     seen_epds.add(epd)
                     
                     # Check Lichess
-                    time.sleep(0.1) # Rate limit
-                    master_data = get_master_moves(epd)
-                    if master_data and master_data.get('white', 0) + master_data.get('black', 0) + master_data.get('draws', 0) > 50:
-                        master_moves = master_data.get('moves', [])
-                        
-                        if master_moves:
-                            top_move = master_moves[0]['uci']
-                            
-                            user_move_uci = move.uci()
-                            user_in_masters = False
-                            total_master_plays = sum(m['white'] + m['black'] + m['draws'] for m in master_moves)
-                            
-                            if total_master_plays > 50:
-                                if user_move_uci != top_move:
-                                    print(f"Mistake found! User played {user_move_uci}, Master prefers {top_move}")
-                                    flashcards.append({
-                                        "epd": epd,
-                                        "user_move": user_move_uci,
-                                        "correct_move": top_move,
-                                        "interval": 1,
-                                        "next_review": 0
-                                    })
-                                    added_count += 1
-                                    break # Stop analyzing this game
+                    top_move = get_master_move(board)
+                    if top_move:
+                        user_move_uci = move.uci()
+                        if user_move_uci != top_move:
+                            print(f"Mistake found! User played {user_move_uci}, Master prefers {top_move}")
+                            flashcards.append({
+                                "epd": epd,
+                                "user_move": user_move_uci,
+                                "correct_move": top_move,
+                                "interval": 1,
+                                "next_review": 0
+                            })
+                            added_count += 1
+                            break # Stop analyzing this game
             
             board.push(move)
             ply_count += 1
