@@ -30,6 +30,7 @@ class ChessGUI:
         
         self.board = chess.Board()
         self.selected_sq = None
+        self.view_index = -1 # -1 means live
         
         self.is_dragging = False
         self.drag_x = 0
@@ -39,7 +40,6 @@ class ChessGUI:
         self.arrows = set()
         self.drag_start_sq = None
         
-        # Mode specific variables
         self.player_color = chess.WHITE
         self.difficulty = tk.IntVar(value=4)
         self.bvb_white_depth = tk.IntVar(value=4)
@@ -106,11 +106,59 @@ class ChessGUI:
         self.history_scroll.pack(side=tk.RIGHT, fill=tk.Y)
         
         self.history_text = tk.Text(self.right_frame, width=22, height=35, yscrollcommand=self.history_scroll.set, state=tk.DISABLED, font=("Courier", 14), bg="#2b2b2b", fg="#d4d4d4")
-        self.history_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        self.history_text.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
         self.history_scroll.config(command=self.history_text.yview)
+        
+        self.nav_frame = tk.Frame(self.right_frame, bg="#2b2b2b")
+        self.nav_frame.pack(fill=tk.X, pady=(5, 0), side=tk.BOTTOM)
+        
+        self.prev_btn = tk.Button(self.nav_frame, text="<", command=self.view_prev, width=5)
+        self.prev_btn.pack(side=tk.LEFT, padx=(10, 5), pady=5)
+        
+        self.nav_label = tk.Label(self.nav_frame, text="Live", fg="#d4d4d4", bg="#2b2b2b", font=("Arial", 12))
+        self.nav_label.pack(side=tk.LEFT, expand=True)
+        
+        self.next_btn = tk.Button(self.nav_frame, text=">", command=self.view_next, width=5)
+        self.next_btn.pack(side=tk.RIGHT, padx=(5, 10), pady=5)
         
         self.load_images()
         self.draw_board()
+
+    def view_prev(self):
+        max_idx = len(self.board.move_stack)
+        if max_idx == 0: return
+        
+        if self.view_index == -1:
+            self.view_index = max_idx - 1
+        elif self.view_index > 0:
+            self.view_index -= 1
+        self.draw_board()
+
+    def view_next(self):
+        max_idx = len(self.board.move_stack)
+        if self.view_index == -1: return
+        
+        if self.view_index < max_idx - 1:
+            self.view_index += 1
+        else:
+            self.view_index = -1
+        self.draw_board()
+
+    def get_view_board(self):
+        if self.view_index == -1:
+            return self.board
+            
+        max_idx = len(self.board.move_stack)
+        if self.view_index >= max_idx:
+            self.view_index = -1
+            return self.board
+            
+        temp_board = chess.Board()
+        for i, move in enumerate(self.board.move_stack):
+            if i >= self.view_index:
+                break
+            temp_board.push(move)
+        return temp_board
 
     def toggle_sim(self):
         if not self.bvb_running:
@@ -166,6 +214,7 @@ class ChessGUI:
                 
         self.selected_sq = None
         self.is_dragging = False
+        self.view_index = -1
         self.clear_markup()
         self.draw_board()
         
@@ -175,6 +224,7 @@ class ChessGUI:
         self.is_dragging = False
         self.bvb_running = False
         self.bvb_paused = False
+        self.view_index = -1
         if self.mode == "BvB":
             self.sim_btn.config(text="Start Sim")
             
@@ -224,7 +274,10 @@ class ChessGUI:
 
     def left_click(self, event):
         if self.mode == "BvB":
-            return # No dragging in Bot vs Bot
+            return
+            
+        if self.view_index != -1:
+            return # Cannot drag while viewing history
             
         self.clear_markup()
         
@@ -282,6 +335,7 @@ class ChessGUI:
         if move in self.board.legal_moves:
             self.board.push(move)
             self.selected_sq = None
+            self.view_index = -1
             self.draw_board()
             self.root.update()
             
@@ -376,10 +430,19 @@ class ChessGUI:
                 
         self.history_text.insert(tk.END, move_text)
         self.history_text.config(state=tk.DISABLED)
-        self.history_text.see(tk.END)
+        
+        if self.view_index == -1:
+            self.history_text.see(tk.END)
 
     def draw_board(self):
         self.canvas.delete("all")
+        view_board = self.get_view_board()
+        
+        if self.view_index == -1:
+            self.nav_label.config(text="Live")
+        else:
+            self.nav_label.config(text=f"Move {self.view_index} / {len(self.board.move_stack)}")
+            
         colors = ["#eeeed2", "#769656"]
         highlight_colors = ["#eb6150", "#ca3d30"]
         select_colors = ["#f6f669", "#baca44"]
@@ -414,9 +477,9 @@ class ChessGUI:
                 sq = self.get_square_from_grid(c, r)
                 x0, y0 = c * 80, r * 80
                 
-                piece = self.board.piece_at(sq)
+                piece = view_board.piece_at(sq)
                 if piece:
-                    if self.is_dragging and sq == self.selected_sq:
+                    if self.is_dragging and sq == self.selected_sq and self.view_index == -1:
                         dragged_piece = piece
                         continue
                         
@@ -427,8 +490,8 @@ class ChessGUI:
                         char = UNICODE_PIECES[piece.symbol()]
                         self.canvas.create_text(x0 + 40, y0 + 40, text=char, font=("Arial", 60), fill="black")
 
-        if self.selected_sq is not None:
-            for move in self.board.legal_moves:
+        if self.selected_sq is not None and self.view_index == -1:
+            for move in view_board.legal_moves:
                 if move.from_square == self.selected_sq:
                     to_sq = move.to_square
                     if self.player_color == chess.BLACK:
@@ -438,7 +501,7 @@ class ChessGUI:
                     x = c * 80 + 40
                     y = r * 80 + 40
                     
-                    if self.board.piece_at(to_sq):
+                    if view_board.piece_at(to_sq):
                         self.canvas.create_oval(x-35, y-35, x+35, y+35, outline="#888888", width=5)
                     else:
                         self.canvas.create_oval(x-12, y-12, x+12, y+12, fill="#888888", outline="")
@@ -455,7 +518,7 @@ class ChessGUI:
             x2, y2 = c2 * 80 + 40, r2 * 80 + 40
             self.canvas.create_line(x1, y1, x2, y2, fill="#ffaa00", width=6, arrow=tk.LAST, arrowshape=(16, 20, 6))
                     
-        white_score = evaluate(self.board) if self.board.turn == chess.WHITE else -evaluate(self.board)
+        white_score = evaluate(view_board) if view_board.turn == chess.WHITE else -evaluate(view_board)
         
         if white_score > 90000:
             display_score = "M"
