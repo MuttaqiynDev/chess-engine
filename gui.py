@@ -213,18 +213,23 @@ class ChessGUI:
         self.canvas.delete("all")
         colors = ["#eeeed2", "#769656"]
         
+        # Transparent-looking overlays achieved by blending with the base square colors
+        highlight_colors = ["#eb6150", "#ca3d30"] # Light red, Dark red
+        select_colors = ["#f6f669", "#baca44"] # Light yellow, Dark yellow
+        
         for r in range(8):
             for c in range(8):
                 sq = chess.square(c, 7 - r)
-                color = colors[(r + c) % 2]
+                color_idx = (r + c) % 2
+                color = colors[color_idx]
                 
                 x0, y0 = c * 80, r * 80
                 x1, y1 = x0 + 80, y0 + 80
                 
                 if self.selected_sq == sq:
-                    color = "#f5f682"
+                    color = select_colors[color_idx]
                 elif sq in self.highlights:
-                    color = "#e67373"
+                    color = highlight_colors[color_idx]
                     
                 self.canvas.create_rectangle(x0, y0, x1, y1, fill=color, outline="")
                 
