@@ -40,12 +40,21 @@ class ChessGUI:
         self.arrows = set()
         self.drag_start_sq = None
         
+        # Mode specific variables
         self.player_color = chess.WHITE
         self.difficulty = tk.IntVar(value=4)
         self.bvb_white_depth = tk.IntVar(value=4)
         self.bvb_black_depth = tk.IntVar(value=4)
         self.bvb_running = False
         self.bvb_paused = False
+        
+        import json
+        self.openings_db = {}
+        try:
+            with open(os.path.join(os.path.dirname(__file__), "data", "openings.json"), "r") as f:
+                self.openings_db = json.load(f)
+        except Exception as e:
+            print(f"Could not load openings database: {e}")
         
         # Root layout
         self.main_container = tk.Frame(self.root)
@@ -100,7 +109,10 @@ class ChessGUI:
             self.sim_btn.pack(side=tk.LEFT, padx=(10, 5))
         
         # --- RIGHT FRAME (Move History) ---
-        tk.Label(self.right_frame, text="Move History", font=("Arial", 16, "bold")).pack(pady=(0, 10))
+        tk.Label(self.right_frame, text="Move History", font=("Arial", 16, "bold")).pack(pady=(0, 5))
+        
+        self.opening_label = tk.Label(self.right_frame, text="Starting Position", font=("Arial", 12, "italic"), fg="#a0a0a0")
+        self.opening_label.pack(pady=(0, 10))
         
         self.history_scroll = tk.Scrollbar(self.right_frame)
         self.history_scroll.pack(side=tk.RIGHT, fill=tk.Y)
@@ -434,9 +446,29 @@ class ChessGUI:
         if self.view_index == -1:
             self.history_text.see(tk.END)
 
+    def get_opening_name(self):
+        temp = chess.Board()
+        last_known = "Starting Position"
+        if temp.epd() in self.openings_db:
+            last_known = self.openings_db[temp.epd()]
+            
+        limit = len(self.board.move_stack) if self.view_index == -1 else self.view_index
+        for i, move in enumerate(self.board.move_stack):
+            if i >= limit:
+                break
+            temp.push(move)
+            epd = temp.epd()
+            if epd in self.openings_db:
+                last_known = self.openings_db[epd]
+                
+        return last_known
+
     def draw_board(self):
         self.canvas.delete("all")
         view_board = self.get_view_board()
+        
+        opening_name = self.get_opening_name()
+        self.opening_label.config(text=opening_name)
         
         if self.view_index == -1:
             self.nav_label.config(text="Live")
