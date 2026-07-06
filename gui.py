@@ -233,6 +233,13 @@ class ChessGUI:
                     
                 self.canvas.create_rectangle(x0, y0, x1, y1, fill=color, outline="")
                 
+                # Draw coordinates
+                text_color = colors[1 - color_idx] # Use opposite square color for high contrast
+                if c == 0: # Ranks 1-8 on the left
+                    self.canvas.create_text(x0 + 8, y0 + 12, text=str(8 - r), fill=text_color, font=("Arial", 11, "bold"))
+                if r == 7: # Files a-h on the bottom
+                    self.canvas.create_text(x0 + 70, y0 + 68, text=chr(ord('a') + c), fill=text_color, font=("Arial", 11, "bold"))
+                
         dragged_piece = None
         for r in range(8):
             for c in range(8):
