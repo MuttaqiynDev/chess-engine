@@ -25,8 +25,10 @@ class ChessGUI:
     def __init__(self, root, mode="PvB"):
         self.root = root
         self.mode = mode
-        mode_title = "Play vs Bot" if mode == "PvB" else "2 Player Local" if mode == "PvP" else "Bot vs Bot Simulation" if mode == "BvB" else "Play vs Myself"
-        self.root.title(f"Abdulazizxon's Chess Engine - {mode_title}")
+        try:
+            self.root.title(f"Abdulazizxon's Chess Engine - {mode_title}")
+        except AttributeError:
+            pass # Embedded in a CTKFrame
         
         self.board = chess.Board()
         self.selected_sq = None
@@ -148,7 +150,10 @@ class ChessGUI:
 
     def go_home(self):
         self.bvb_running = False
-        self.root.destroy()
+        if hasattr(self.root.master, "show_dashboard"):
+            self.root.master.show_dashboard()
+        else:
+            self.root.destroy()
 
     def view_prev(self):
         max_idx = len(self.board.move_stack)

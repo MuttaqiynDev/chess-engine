@@ -1,0 +1,186 @@
+import customtkinter as ctk
+import tkinter as tk
+import os, json
+import chess
+from gui import ChessGUI
+
+class AuraChess(ctk.CTk):
+    def __init__(self):
+        super().__init__()
+        self.title("AuraChess - The AI Chess Lab")
+        self.geometry("1100x700")
+        
+        # Grid layout
+        self.grid_rowconfigure(0, weight=1)
+        self.grid_columnconfigure(1, weight=1)
+        
+        # Sidebar
+        self.sidebar_frame = ctk.CTkFrame(self, width=200, corner_radius=0)
+        self.sidebar_frame.grid(row=0, column=0, sticky="nsew")
+        self.sidebar_frame.grid_rowconfigure(6, weight=1)
+        
+        self.logo_label = ctk.CTkLabel(self.sidebar_frame, text="AuraChess", font=ctk.CTkFont(size=24, weight="bold"))
+        self.logo_label.grid(row=0, column=0, padx=20, pady=(20, 10))
+        
+        self.dashboard_btn = ctk.CTkButton(self.sidebar_frame, text="Dashboard", command=self.show_dashboard)
+        self.dashboard_btn.grid(row=1, column=0, padx=20, pady=10)
+        
+        self.play_btn = ctk.CTkButton(self.sidebar_frame, text="Play AI", command=self.show_play)
+        self.play_btn.grid(row=2, column=0, padx=20, pady=10)
+        
+        self.pvm_btn = ctk.CTkButton(self.sidebar_frame, text="Play Persona", command=self.show_pvm)
+        self.pvm_btn.grid(row=3, column=0, padx=20, pady=10)
+        
+        self.pvp_btn = ctk.CTkButton(self.sidebar_frame, text="Play Local", command=self.show_pvp)
+        self.pvp_btn.grid(row=4, column=0, padx=20, pady=10)
+        
+        self.analyze_btn = ctk.CTkButton(self.sidebar_frame, text="PGN Analyzer", command=self.show_analyzer)
+        self.analyze_btn.grid(row=5, column=0, padx=20, pady=10)
+        
+        # Frames
+        self.dashboard_frame = DashboardFrame(self, self)
+        self.play_frame = ctk.CTkFrame(self, corner_radius=0, fg_color="transparent")
+        self.analyzer_frame = AnalyzerFrame(self, self)
+        
+        # Default
+        self.current_frame = None
+        self.show_dashboard()
+
+    def select_frame_by_name(self, name):
+        if self.current_frame:
+            self.current_frame.grid_forget()
+        
+        if name == "dashboard":
+            self.current_frame = self.dashboard_frame
+            self.dashboard_frame.refresh_stats()
+        elif name == "play":
+            for widget in self.play_frame.winfo_children():
+                widget.destroy()
+            ChessGUI(self.play_frame, mode="PvB")
+            self.current_frame = self.play_frame
+        elif name == "pvm":
+            for widget in self.play_frame.winfo_children():
+                widget.destroy()
+            ChessGUI(self.play_frame, mode="PvM")
+            self.current_frame = self.play_frame
+        elif name == "pvp":
+            for widget in self.play_frame.winfo_children():
+                widget.destroy()
+            ChessGUI(self.play_frame, mode="PvP")
+            self.current_frame = self.play_frame
+        elif name == "analyze":
+            self.current_frame = self.analyzer_frame
+            
+        self.current_frame.grid(row=0, column=1, sticky="nsew")
+
+    def show_dashboard(self): self.select_frame_by_name("dashboard")
+    def show_play(self): self.select_frame_by_name("play")
+    def show_pvm(self): self.select_frame_by_name("pvm")
+    def show_pvp(self): self.select_frame_by_name("pvp")
+    def show_analyzer(self): self.select_frame_by_name("analyze")
+
+
+class DashboardFrame(ctk.CTkFrame):
+    def __init__(self, parent, controller):
+        super().__init__(parent, corner_radius=0, fg_color="transparent")
+        self.grid_columnconfigure(0, weight=1)
+        
+        self.title = ctk.CTkLabel(self, text="Welcome to AuraChess Lab", font=ctk.CTkFont(size=32, weight="bold"))
+        self.title.grid(row=0, column=0, padx=20, pady=40)
+        
+        self.stats_frame = ctk.CTkFrame(self)
+        self.stats_frame.grid(row=1, column=0, padx=40, pady=20, sticky="nsew")
+        
+        self.stats_label = ctk.CTkLabel(self.stats_frame, text="", font=ctk.CTkFont(size=18), justify="left")
+        self.stats_label.pack(padx=20, pady=20)
+        
+    def refresh_stats(self):
+        book_path = os.path.join(os.path.dirname(__file__), "data", "user_book.json")
+        try:
+            with open(book_path, "r") as f:
+                user_book = json.load(f)
+                num_positions = len(user_book)
+                text = f"Your Digital Persona is active.\n\nPositions Modeled: {num_positions:,}\n\nThe 'Play Persona' mode is ready for you to spar against yourself."
+                self.stats_label.configure(text=text)
+        except:
+            self.stats_label.configure(text="No user data found. Run build_user_book.py to generate your persona.")
+
+
+class AnalyzerFrame(ctk.CTkFrame):
+    def __init__(self, parent, controller):
+        super().__init__(parent, corner_radius=0, fg_color="transparent")
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_rowconfigure(1, weight=1)
+        
+        self.top_frame = ctk.CTkFrame(self, fg_color="transparent")
+        self.top_frame.grid(row=0, column=0, sticky="ew", padx=20, pady=20)
+        
+        self.title = ctk.CTkLabel(self.top_frame, text="PGN Engine Analyzer", font=ctk.CTkFont(size=24, weight="bold"))
+        self.title.pack(side="left")
+        
+        self.load_btn = ctk.CTkButton(self.top_frame, text="Load PGN", command=self.load_pgn)
+        self.load_btn.pack(side="right")
+        
+        self.graph_frame = ctk.CTkFrame(self)
+        self.graph_frame.grid(row=1, column=0, sticky="nsew", padx=20, pady=20)
+        
+        self.status_lbl = ctk.CTkLabel(self.graph_frame, text="Load a PGN to generate an evaluation profile...")
+        self.status_lbl.pack(expand=True)
+        
+    def load_pgn(self):
+        import tkinter.filedialog as fd
+        path = fd.askopenfilename(filetypes=[("PGN Files", "*.pgn")])
+        if path:
+            self.status_lbl.configure(text="Analyzing game... Please wait.")
+            self.update()
+            import threading
+            threading.Thread(target=self.analyze, args=(path,), daemon=True).start()
+            
+    def analyze(self, path):
+        import chess.pgn
+        from evaluate import evaluate
+        scores = []
+        with open(path, "r") as f:
+            game = chess.pgn.read_game(f)
+            if not game: return
+            board = game.board()
+            for move in game.mainline_moves():
+                board.push(move)
+                score = evaluate(board)
+                if board.turn == chess.WHITE:
+                    real_score = score
+                else:
+                    real_score = -score
+                scores.append(real_score)
+                
+        self.after(0, lambda: self.draw_graph(scores))
+        
+    def draw_graph(self, scores):
+        for widget in self.graph_frame.winfo_children():
+            widget.destroy()
+            
+        import matplotlib.pyplot as plt
+        from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+        
+        fig, ax = plt.subplots(figsize=(8, 4), facecolor='#2b2b2b')
+        ax.set_facecolor('#2b2b2b')
+        ax.plot(scores, color='#1f538d', linewidth=2)
+        ax.fill_between(range(len(scores)), scores, 0, where=[s >= 0 for s in scores], color='white', alpha=0.3, interpolate=True)
+        ax.fill_between(range(len(scores)), scores, 0, where=[s < 0 for s in scores], color='black', alpha=0.3, interpolate=True)
+        
+        ax.tick_params(colors='white')
+        for spine in ax.spines.values():
+            spine.set_color('#555555')
+            
+        ax.set_title("Evaluation Profile", color='white')
+        ax.set_ylabel("Advantage", color='white')
+        
+        canvas = FigureCanvasTkAgg(fig, master=self.graph_frame)
+        canvas.draw()
+        canvas.get_tk_widget().pack(fill="both", expand=True)
+
+if __name__ == "__main__":
+    ctk.set_appearance_mode("Dark")
+    ctk.set_default_color_theme("blue")
+    app = AuraChess()
+    app.mainloop()
