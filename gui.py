@@ -88,7 +88,10 @@ class ChessGUI:
         self.controls = tk.Frame(self.left_frame, pady=10)
         self.controls.pack(side=tk.BOTTOM, fill=tk.X)
         
-        self.undo_btn = tk.Button(self.controls, text="Undo", command=self.undo_move, width=6)
+        self.home_btn = tk.Button(self.controls, text="Home", command=self.go_home, width=5)
+        self.home_btn.pack(side=tk.LEFT, padx=(2, 2))
+        
+        self.undo_btn = tk.Button(self.controls, text="Undo", command=self.undo_move, width=5)
         self.undo_btn.pack(side=tk.LEFT, padx=(2, 2))
         
         self.restart_btn = tk.Button(self.controls, text="Restart", command=self.restart_game, width=6)
@@ -142,6 +145,10 @@ class ChessGUI:
         
         self.load_images()
         self.draw_board()
+
+    def go_home(self):
+        self.bvb_running = False
+        self.root.destroy()
 
     def view_prev(self):
         max_idx = len(self.board.move_stack)
@@ -656,14 +663,19 @@ class StartupMenu:
         self.r.destroy()
 
 if __name__ == "__main__":
-    root = tk.Tk()
-    root.lift()
-    root.attributes('-topmost', True)
-    root.after_idle(root.attributes, '-topmost', False)
-    menu = StartupMenu(root)
-    root.mainloop()
-    
-    if app_state["mode"] is not None:
+    while True:
+        app_state["mode"] = None
+        
+        root = tk.Tk()
+        root.lift()
+        root.attributes('-topmost', True)
+        root.after_idle(root.attributes, '-topmost', False)
+        menu = StartupMenu(root)
+        root.mainloop()
+        
+        if app_state["mode"] is None:
+            break
+            
         game_root = tk.Tk()
         game_root.lift()
         game_root.attributes('-topmost', True)
