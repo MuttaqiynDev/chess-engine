@@ -392,8 +392,8 @@ class ChessGUI:
         
         delay_ms = 0
         if self.mode == "BvB":
-            if calc_time < 1.5:
-                delay_ms = int((1.5 - calc_time) * 1000)
+            if calc_time < 0.5:
+                delay_ms = int((0.5 - calc_time) * 1000)
                 
         if delay_ms > 0:
             self.root.after(delay_ms, lambda: self.finish_engine_move(move))
@@ -401,8 +401,10 @@ class ChessGUI:
             self.finish_engine_move(move)
 
     def finish_engine_move(self, move):
-        if move:
+        if move and move in self.board.legal_moves:
             self.board.push(move)
+        elif move:
+            return # Ignore if a race condition fed an illegal move
             
         self.undo_btn.config(state=tk.NORMAL)
         self.restart_btn.config(state=tk.NORMAL)
