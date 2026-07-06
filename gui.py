@@ -39,7 +39,18 @@ class ChessGUI:
         
         self.difficulty = tk.IntVar(value=3)
         
-        self.canvas = tk.Canvas(self.root, width=680, height=640)
+        # Root layout
+        self.main_container = tk.Frame(self.root)
+        self.main_container.pack(fill=tk.BOTH, expand=True)
+        
+        self.left_frame = tk.Frame(self.main_container)
+        self.left_frame.pack(side=tk.LEFT, padx=10, pady=10)
+        
+        self.right_frame = tk.Frame(self.main_container)
+        self.right_frame.pack(side=tk.RIGHT, fill=tk.Y, padx=10, pady=10)
+        
+        # --- LEFT FRAME (Board + Controls) ---
+        self.canvas = tk.Canvas(self.left_frame, width=680, height=640)
         self.canvas.pack(side=tk.TOP)
         
         self.canvas.bind("<Button-1>", self.left_click)
@@ -50,7 +61,7 @@ class ChessGUI:
         self.canvas.bind("<ButtonRelease-2>", self.right_click_release)
         self.canvas.bind("<ButtonRelease-3>", self.right_click_release)
         
-        self.controls = tk.Frame(self.root, pady=10)
+        self.controls = tk.Frame(self.left_frame, pady=10)
         self.controls.pack(side=tk.BOTTOM, fill=tk.X)
         
         self.undo_btn = tk.Button(self.controls, text="Undo", command=self.undo_move, width=10)
@@ -62,6 +73,16 @@ class ChessGUI:
         tk.Label(self.controls, text="Difficulty (Depth):").pack(side=tk.LEFT, padx=(40, 5))
         self.diff_menu = tk.OptionMenu(self.controls, self.difficulty, 1, 2, 3, 4)
         self.diff_menu.pack(side=tk.LEFT)
+        
+        # --- RIGHT FRAME (Move History) ---
+        tk.Label(self.right_frame, text="Move History", font=("Arial", 16, "bold")).pack(pady=(0, 10))
+        
+        self.history_scroll = tk.Scrollbar(self.right_frame)
+        self.history_scroll.pack(side=tk.RIGHT, fill=tk.Y)
+        
+        self.history_text = tk.Text(self.right_frame, width=22, height=35, yscrollcommand=self.history_scroll.set, state=tk.DISABLED, font=("Courier", 14), bg="#f8f9fa")
+        self.history_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        self.history_scroll.config(command=self.history_text.yview)
         
         self.load_images()
         self.draw_board()
@@ -135,7 +156,6 @@ class ChessGUI:
 
     def left_click(self, event):
         self.clear_markup()
-        
         if self.board.turn == chess.BLACK or self.board.is_game_over():
             self.draw_board()
             return
@@ -175,7 +195,6 @@ class ChessGUI:
 
     def attempt_move(self, from_sq, to_sq):
         move = chess.Move(from_sq, to_sq)
-        
         if self.board.piece_at(from_sq) and self.board.piece_at(from_sq).piece_type == chess.PAWN:
             if chess.square_rank(to_sq) == 7: 
                 move = chess.Move(from_sq, to_sq, promotion=chess.QUEEN)
@@ -209,13 +228,31 @@ class ChessGUI:
         if self.board.is_game_over():
             print("Game Over:", self.board.result())
 
+    def update_move_history(self):
+        self.history_text.config(state=tk.NORMAL)
+        self.history_text.delete(1.0, tk.END)
+        
+        temp_board = chess.Board()
+        move_text = ""
+        
+        for i, move in enumerate(self.board.move_stack):
+            san = temp_board.san(move)
+            temp_board.push(move)
+            
+            if i % 2 == 0:
+                move_text += f"{(i // 2) + 1}. {san:<7}"
+            else:
+                move_text += f"{san}\n"
+                
+        self.history_text.insert(tk.END, move_text)
+        self.history_text.config(state=tk.DISABLED)
+        self.history_text.see(tk.END)
+
     def draw_board(self):
         self.canvas.delete("all")
         colors = ["#eeeed2", "#769656"]
-        
-        # Transparent-looking overlays achieved by blending with the base square colors
-        highlight_colors = ["#eb6150", "#ca3d30"] # Light red, Dark red
-        select_colors = ["#f6f669", "#baca44"] # Light yellow, Dark yellow
+        highlight_colors = ["#eb6150", "#ca3d30"]
+        select_colors = ["#f6f669", "#baca44"]
         
         for r in range(8):
             for c in range(8):
@@ -233,11 +270,10 @@ class ChessGUI:
                     
                 self.canvas.create_rectangle(x0, y0, x1, y1, fill=color, outline="")
                 
-                # Draw coordinates
-                text_color = colors[1 - color_idx] # Use opposite square color for high contrast
-                if c == 0: # Ranks 1-8 on the left
+                text_color = colors[1 - color_idx]
+                if c == 0:
                     self.canvas.create_text(x0 + 8, y0 + 12, text=str(8 - r), fill=text_color, font=("Arial", 11, "bold"))
-                if r == 7: # Files a-h on the bottom
+                if r == 7:
                     self.canvas.create_text(x0 + 70, y0 + 68, text=chr(ord('a') + c), fill=text_color, font=("Arial", 11, "bold"))
                 
         dragged_piece = None
@@ -317,6 +353,8 @@ class ChessGUI:
             else:
                 char = UNICODE_PIECES[dragged_piece.symbol()]
                 self.canvas.create_text(self.drag_x, self.drag_y, text=char, font=("Arial", 60), fill="black")
+                
+        self.update_move_history()
 
 if __name__ == "__main__":
     root = tk.Tk()
