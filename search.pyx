@@ -13,7 +13,7 @@ cdef dict TT = {}
 
 cdef tuple negamax(board, int depth, int alpha, int beta):
     cdef int original_alpha = alpha
-    cdef int hash_key = chess.polyglot.zobrist_hash(board)
+    cdef unsigned long long hash_key = chess.polyglot.zobrist_hash(board)
     cdef int best_val = -999999
     cdef int val
     cdef int flag
@@ -21,10 +21,14 @@ cdef tuple negamax(board, int depth, int alpha, int beta):
     
     if len(board.move_stack) > 0 and board.move_stack[-1] == chess.Move.null():
         last_was_null = True
+        
+    tt_move_for_ordering = None
     
     # 1. Transposition Table Lookup
     if hash_key in TT:
         tt_depth, tt_flag, tt_score, tt_move = TT[hash_key]
+        tt_move_for_ordering = tt_move
+        
         if tt_depth >= depth:
             if tt_flag == 0: # EXACT
                 return tt_score, tt_move
@@ -52,7 +56,7 @@ cdef tuple negamax(board, int depth, int alpha, int beta):
             return beta, None
 
     best_move = None
-    moves = order_moves(board, board.legal_moves)
+    moves = order_moves(board, board.legal_moves, tt_move_for_ordering)
     
     if not moves:
         return -999999, None
@@ -103,5 +107,9 @@ cpdef get_best_move(board, int depth=4):
         except Exception as e:
             print(f"Book error: {e}")
             
-    val, move = negamax(board, depth, -999999, 999999)
-    return move
+    # Iterative Deepening
+    best_move_overall = None
+    for d in range(1, depth + 1):
+        val, best_move_overall = negamax(board, d, -999999, 999999)
+        
+    return best_move_overall

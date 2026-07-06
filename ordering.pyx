@@ -9,7 +9,7 @@ cdef dict piece_values = {
     chess.KING: 100
 }
 
-def order_moves(board, moves):
+def order_moves(board, moves, tt_move=None):
     cdef list scored_moves = []
     cdef int score
     cdef int victim_val
@@ -17,7 +17,9 @@ def order_moves(board, moves):
     
     for move in moves:
         score = 0
-        if board.is_capture(move):
+        if move == tt_move:
+            score = 9999999 # Prioritize Engine Memory Move Absolutely First!
+        elif board.is_capture(move):
             victim = board.piece_at(move.to_square)
             attacker = board.piece_at(move.from_square)
             
