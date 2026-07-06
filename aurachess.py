@@ -100,10 +100,37 @@ class DashboardFrame(ctk.CTkFrame):
             with open(book_path, "r") as f:
                 user_book = json.load(f)
                 num_positions = len(user_book)
-                text = f"Your Digital Persona is active.\n\nPositions Modeled: {num_positions:,}\n\nThe 'Play Persona' mode is ready for you to spar against yourself."
+                
+                START_EPD = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -"
+                white_openings = user_book.get(START_EPD, {})
+                sorted_white = sorted(white_openings.items(), key=lambda x: x[1], reverse=True)[:3]
+                
+                import chess
+                e4_board = chess.Board()
+                e4_board.push(chess.Move.from_uci("e2e4"))
+                d4_board = chess.Board()
+                d4_board.push(chess.Move.from_uci("d2d4"))
+                
+                e4_responses = user_book.get(e4_board.epd(), {})
+                d4_responses = user_book.get(d4_board.epd(), {})
+                
+                sorted_e4 = sorted(e4_responses.items(), key=lambda x: x[1], reverse=True)[:3]
+                sorted_d4 = sorted(d4_responses.items(), key=lambda x: x[1], reverse=True)[:3]
+                
+                text = f"Your Digital Persona is active.\nPositions Modeled: {num_positions:,}\n\n"
+                
+                text += "Your Preferred Openings (White):\n"
+                for move, prob in sorted_white: text += f" • {move}: {prob*100:.1f}%\n"
+                    
+                text += "\nYour Responses to 1. e4 (Black):\n"
+                for move, prob in sorted_e4: text += f" • {move}: {prob*100:.1f}%\n"
+                    
+                text += "\nYour Responses to 1. d4 (Black):\n"
+                for move, prob in sorted_d4: text += f" • {move}: {prob*100:.1f}%\n"
+                
                 self.stats_label.configure(text=text)
-        except:
-            self.stats_label.configure(text="No user data found. Run build_user_book.py to generate your persona.")
+        except Exception as e:
+            self.stats_label.configure(text=f"No user data found. Run build_user_book.py\n{e}")
 
 
 class AnalyzerFrame(ctk.CTkFrame):

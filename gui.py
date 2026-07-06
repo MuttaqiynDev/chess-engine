@@ -76,8 +76,12 @@ class ChessGUI:
         self.right_frame.pack(side=tk.RIGHT, fill=tk.Y, padx=10, pady=10)
         
         # --- LEFT FRAME (Board + Controls) ---
-        self.canvas = tk.Canvas(self.left_frame, width=680, height=640)
-        self.canvas.pack(side=tk.TOP)
+        # Eval Bar
+        self.eval_canvas = tk.Canvas(self.left_frame, width=20, height=480, bg="#2b2b2b", highlightthickness=1, highlightbackground="#555")
+        self.eval_canvas.pack(side=tk.LEFT, padx=(20, 0), pady=20)
+        
+        self.canvas = tk.Canvas(self.left_frame, width=480, height=480, bg="#d4d4d4", highlightthickness=0)
+        self.canvas.pack(side=tk.LEFT, padx=20, pady=20)
         
         self.canvas.bind("<Button-1>", self.left_click)
         self.canvas.bind("<B1-Motion>", self.drag_motion)
@@ -95,6 +99,12 @@ class ChessGUI:
         
         self.undo_btn = tk.Button(self.controls, text="Undo", command=self.undo_move, width=5)
         self.undo_btn.pack(side=tk.LEFT, padx=(2, 2))
+        
+        self.hint_btn = tk.Button(self.controls, text="Hint", command=self.show_hint, width=4)
+        self.hint_btn.pack(side=tk.LEFT, padx=(2, 2))
+        
+        self.export_btn = tk.Button(self.controls, text="Export", command=self.export_pgn, width=5)
+        self.export_btn.pack(side=tk.LEFT, padx=(2, 2))
         
         self.restart_btn = tk.Button(self.controls, text="Restart", command=self.restart_game, width=6)
         self.restart_btn.pack(side=tk.LEFT, padx=(2, 2))
@@ -154,6 +164,61 @@ class ChessGUI:
             self.root.master.show_dashboard()
         else:
             self.root.destroy()
+            
+    def show_hint(self):
+        if getattr(self, "engine_thinking", False) or self.board.is_game_over(claim_draw=True): 
+            return
+            
+        def calc():
+            from search import get_best_move
+            move = get_best_move(self.board.copy(), depth=4)
+            if move:
+                self.root.after(0, lambda: self.draw_arrow(move))
+                
+        import threading
+        threading.Thread(target=calc, daemon=True).start()
+
+    def draw_arrow(self, move):
+        self.canvas.delete("hint_arrow")
+        if not move: return
+        
+        sq_size = 60
+        f_col = chess.square_file(move.from_square)
+        f_row = 7 - chess.square_rank(move.from_square)
+        t_col = chess.square_file(move.to_square)
+        t_row = 7 - chess.square_rank(move.to_square)
+        
+        if self.player_color == chess.BLACK:
+            f_col, f_row = 7 - f_col, 7 - f_row
+            t_col, t_row = 7 - t_col, 7 - t_row
+            
+        x1 = f_col * sq_size + sq_size//2
+        y1 = f_row * sq_size + sq_size//2
+        x2 = t_col * sq_size + sq_size//2
+        y2 = t_row * sq_size + sq_size//2
+        
+        self.canvas.create_line(x1, y1, x2, y2, arrow=tk.LAST, width=6, fill="#2ecc71", tags="hint_arrow")
+        self.root.after(2000, lambda: self.canvas.delete("hint_arrow"))
+
+    def export_pgn(self):
+        import tkinter.filedialog as fd
+        import chess.pgn
+        import datetime
+        
+        path = fd.asksaveasfilename(defaultextension=".pgn", filetypes=[("PGN Files", "*.pgn")])
+        if not path: return
+        
+        game = chess.pgn.Game()
+        game.headers["Date"] = datetime.datetime.now().strftime("%Y.%m.%d")
+        game.headers["White"] = "Player" if self.player_color == chess.WHITE else "Aura Engine"
+        game.headers["Black"] = "Player" if self.player_color == chess.BLACK else "Aura Engine"
+        
+        node = game
+        for move in self.board.move_stack:
+            node = node.add_variation(move)
+            
+        with open(path, "w") as f:
+            f.write(str(game))
 
     def view_prev(self):
         max_idx = len(self.board.move_stack)
@@ -174,6 +239,8 @@ class ChessGUI:
         else:
             self.view_index = -1
         self.draw_board()
+
+
 
     def get_view_board(self):
         if self.view_index == -1:
@@ -311,6 +378,7 @@ class ChessGUI:
             return # Cannot drag while viewing history
             
         self.clear_markup()
+        self.canvas.delete("hint_arrow")
         
         if self.mode in ["PvB", "PvM"]:
             if self.board.turn != self.player_color or self.board.is_game_over(claim_draw=True):
@@ -518,6 +586,7 @@ class ChessGUI:
     def draw_board(self):
         self.canvas.delete("all")
         view_board = self.get_view_board()
+        self.update_eval_bar(view_board)
         
         opening_name = self.get_opening_name()
         self.opening_label.config(text=opening_name)
@@ -662,6 +731,30 @@ class ChessGUI:
             self.canvas.create_text(320, 320, text=text, font=("Arial", 36, "bold"), fill="#d4d4d4")
                 
         self.update_move_history()
+
+    def update_eval_bar(self, temp_board):
+        self.eval_canvas.delete("all")
+        from evaluate import evaluate
+        score = evaluate(temp_board)
+        
+        white_score = score if temp_board.turn == chess.WHITE else -score
+        clamped = max(-500, min(500, white_score))
+        ratio = 0.5 + (clamped / 1000)
+        
+        if temp_board.is_checkmate():
+            ratio = 1.0 if temp_board.result() == "1-0" else 0.0
+        elif temp_board.is_game_over() or temp_board.can_claim_draw():
+            ratio = 0.5
+            
+        white_height = 480 * ratio
+        
+        self.eval_canvas.create_rectangle(0, 0, 20, 480, fill="#2b2b2b", outline="")
+        self.eval_canvas.create_rectangle(0, 480 - white_height, 20, 480, fill="#f0f0f0", outline="")
+        
+        y_pos = 480 - white_height
+        if y_pos < 10: y_pos = 10
+        if y_pos > 470: y_pos = 470
+        self.eval_canvas.create_line(0, y_pos, 20, y_pos, fill="#ff4757", width=2)
 
 
 app_state = {"mode": None}
