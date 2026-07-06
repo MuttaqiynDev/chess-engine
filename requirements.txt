@@ -3,3 +3,4 @@ chess
 pygame
 requests
 Pillow
+Cython

@@ -21,3 +21,9 @@ venv.bak/
 dist/
 build/
 *.egg-info/
+
+*.so
+build/
+*.c
+*.bak
+

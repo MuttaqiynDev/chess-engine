@@ -1,6 +1,6 @@
 import chess
 
-PIECE_VALUES = {
+cdef dict PIECE_VALUES = {
     chess.PAWN: 100,
     chess.KNIGHT: 320,
     chess.BISHOP: 330,
@@ -9,9 +9,7 @@ PIECE_VALUES = {
     chess.KING: 0
 }
 
-# Simplified PeSTO-like piece square tables
-# Values are from white's perspective (visualized A8 to H8 on top).
-PST = {
+cdef dict PST = {
     chess.PAWN: [
         0,  0,  0,  0,  0,  0,  0,  0,
         50, 50, 50, 50, 50, 50, 50, 50,
@@ -74,13 +72,16 @@ PST = {
     ]
 }
 
-def evaluate(board):
+cpdef int evaluate(board):
     if board.is_checkmate():
         return -99999 if board.turn else 99999
     if board.is_stalemate() or board.is_insufficient_material() or board.is_repetition():
         return 0
         
-    score = 0
+    cdef int score = 0
+    cdef int val
+    cdef int table_idx
+    
     for sq in chess.SQUARES:
         piece = board.piece_at(sq)
         if piece:
