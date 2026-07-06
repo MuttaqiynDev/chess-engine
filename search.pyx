@@ -40,7 +40,7 @@ cdef tuple negamax(board, int depth, int alpha, int beta):
             if alpha >= beta:
                 return tt_score, tt_move
 
-    if board.is_game_over():
+    if board.is_game_over() or board.can_claim_draw():
         return evaluate(board), None
         
     if depth == 0:

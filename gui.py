@@ -294,11 +294,11 @@ class ChessGUI:
         self.clear_markup()
         
         if self.mode == "PvB":
-            if self.board.turn != self.player_color or self.board.is_game_over():
+            if self.board.turn != self.player_color or self.board.is_game_over(claim_draw=True):
                 self.draw_board()
                 return
                 
-        if self.board.is_game_over():
+        if self.board.is_game_over(claim_draw=True):
             self.draw_board()
             return
             
@@ -351,14 +351,14 @@ class ChessGUI:
             self.draw_board()
             self.root.update()
             
-            if not self.board.is_game_over():
+            if not self.board.is_game_over(claim_draw=True):
                 if self.mode == "PvB":
                     self.root.after(50, self.engine_move)
             return True
         return False
 
     def engine_move(self):
-        if self.board.is_game_over():
+        if self.board.is_game_over(claim_draw=True):
             self.bvb_running = False
             if self.mode == "BvB": self.sim_btn.config(text="Start Sim", state=tk.NORMAL)
             self.draw_board()
@@ -416,10 +416,11 @@ class ChessGUI:
             self.diff_menu.config(state=tk.NORMAL)
             
         self.draw_board()
-        if self.board.is_game_over():
+        if self.board.is_game_over(claim_draw=True):
             self.bvb_running = False
             if self.mode == "BvB": self.sim_btn.config(text="Start Sim")
-            print("Game Over:", self.board.result())
+            result = self.board.result(claim_draw=True)
+            print("Game Over:", result)
         else:
             if self.mode == "BvB" and not self.bvb_paused:
                 self.root.after(50, self.engine_move)
