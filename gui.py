@@ -38,6 +38,8 @@ class ChessGUI:
             self.board.set_epd(epd)
             self.correct_move = kwargs.get("correct_move", "")
             self.user_move = kwargs.get("user_move", "")
+            self.on_next = kwargs.get("on_next", None)
+            
         self.selected_sq = None
         self.view_index = -1 # -1 means live
         
@@ -50,9 +52,9 @@ class ChessGUI:
         self.drag_start_sq = None
         
         # Mode specific variables
-        self.player_color = chess.WHITE
+        self.player_color = self.board.turn if self.mode == "Trainer" else chess.WHITE
         self.difficulty = tk.IntVar(value=4)
-        self.bvb_white_depth = tk.IntVar(value=4)
+        self.bvb_white_depth = tk.IntVar(value=3)
         self.bvb_black_depth = tk.IntVar(value=4)
         self.bvb_running = False
         self.bvb_paused = False
@@ -464,8 +466,11 @@ class ChessGUI:
                     self.show_blunder_warning(f"Correct!\\nTheory move is {self.correct_move}")
                 else:
                     self.show_blunder_warning(f"Incorrect.\\nYou played {self.user_move}\\nGM move: {self.correct_move}")
+                
+                if hasattr(self, 'on_next') and self.on_next:
+                    self.root.after(2000, self.on_next)
+                    
                 self.selected_sq = None
-                self.dragged_piece = None
                 self.draw_board()
                 return False
                 
@@ -838,7 +843,14 @@ class ChessGUI:
     def show_blunder_warning(self, msg="Aura Coach:\\nBlunder Prevented!"):
         self.canvas.create_rectangle(100, 240, 540, 400, fill="#2b2b2b", outline="#ff4757", width=4, tags="blunder_warning")
         self.canvas.create_text(320, 320, text=msg, fill="#ff4757", font=("Helvetica", 24, "bold"), justify="center", tags="blunder_warning")
-        self.root.after(2000, lambda: self.canvas.delete("blunder_warning"))
+        
+        def safe_delete():
+            try:
+                self.canvas.delete("blunder_warning")
+            except Exception:
+                pass
+                
+        self.root.after(2000, safe_delete)
 
 app_state = {"mode": None}
 
