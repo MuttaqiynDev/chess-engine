@@ -2,21 +2,26 @@
 
 **Created by Abdulazizxon Saydaliyev**
 
-A fully-functional, lightweight Python chess engine with a custom Tkinter Graphical User Interface.
+A fully-functional, ultra-fast Python chess engine powered by Cython C-extensions with a custom Tkinter Graphical User Interface.
 
 ## Features
-* **Custom Engine**: Implements Alpha-Beta Negamax search, MVV-LVA move ordering, and Quiescence Search to prevent horizon-effect blunders.
-* **Positional Intelligence**: Uses PeSTO's Piece-Square Tables for strong positional and developmental understanding.
-* **Modern GUI**: Built in Tkinter, featuring:
+* **Cython-Optimized Core**: The engine's core math logic is statically typed and compiled into C (`.so` extensions) for massive performance gains, effortlessly supporting search depths from 1 to 8.
+* **Algorithmic Intelligence**: Implements Alpha-Beta Negamax search, MVV-LVA move ordering, and Quiescence Search to prevent horizon-effect blunders.
+* **Positional & Theoretical Mastery**: 
+  * Uses PeSTO's Piece-Square Tables for strong positional and developmental understanding.
+  * Integrated Polyglot Opening Book (`komodo.bin`) for Grandmaster-level variety and theoretical play in the opening phase.
+* **Modern GUI**: Built natively in Tkinter, featuring:
   * Smooth drag-and-drop piece movement (and click-to-move fallback)
+  * Scrollable Move History sidebar with standard algebraic notation
   * Dynamic Evaluation bar showing real-time engine advantage
   * Interactive arrows (right-click and drag) and square highlights (right-click)
   * Visual indicators for legal moves and captures
-  * Difficulty selector (controls engine search depth)
+  * "Flip Sides" feature to play as Black (automatically inverts coordinates and UI)
   * Undo and Restart functionality
 
 ## Prerequisites
 * Python 3.8+
+* A C-Compiler (like Apple Clang or GCC) to compile the Cython extensions
 * Native macOS/Linux/Windows support
 
 ## Installation
@@ -37,6 +42,11 @@ A fully-functional, lightweight Python chess engine with a custom Tkinter Graphi
    pip install -r requirements.txt
    ```
 
+4. Compile the engine into C-extensions:
+   ```bash
+   python3 setup.py build_ext --inplace
+   ```
+
 ## Running the Game
 
 To launch the GUI and play against the engine:
@@ -44,6 +54,5 @@ To launch the GUI and play against the engine:
 python3 gui.py
 ```
 
-## Graphics Note
-By default, the engine uses robust Unicode characters to render the chess pieces. 
-If you wish to use custom images (like classic PNG piece sets), the engine will automatically look for them in the `~/Downloads/pieces-png/` directory (named `white-king.png`, `black-pawn.png`, etc.). If they are found, it uses Pillow (PIL) to elegantly scale and render them onto the board.
+## Graphics
+The engine uses custom PNG piece sets loaded automatically from the local `images/` directory. If the folder is missing, the GUI will gracefully fall back to using standard Unicode chess characters to render the board.
