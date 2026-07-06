@@ -28,7 +28,6 @@ class ChessGUI:
         self.board = chess.Board()
         self.selected_sq = None
         
-        # New State for Drag and Drop
         self.is_dragging = False
         self.drag_x = 0
         self.drag_y = 0
@@ -38,6 +37,7 @@ class ChessGUI:
         self.drag_start_sq = None
         
         self.difficulty = tk.IntVar(value=3)
+        self.player_color = chess.WHITE
         
         # Root layout
         self.main_container = tk.Frame(self.root)
@@ -64,13 +64,16 @@ class ChessGUI:
         self.controls = tk.Frame(self.left_frame, pady=10)
         self.controls.pack(side=tk.BOTTOM, fill=tk.X)
         
-        self.undo_btn = tk.Button(self.controls, text="Undo", command=self.undo_move, width=10)
-        self.undo_btn.pack(side=tk.LEFT, padx=20)
+        self.undo_btn = tk.Button(self.controls, text="Undo", command=self.undo_move, width=8)
+        self.undo_btn.pack(side=tk.LEFT, padx=(5, 5))
         
-        self.restart_btn = tk.Button(self.controls, text="Restart", command=self.restart_game, width=10)
-        self.restart_btn.pack(side=tk.LEFT, padx=10)
+        self.restart_btn = tk.Button(self.controls, text="Restart", command=self.restart_game, width=8)
+        self.restart_btn.pack(side=tk.LEFT, padx=(5, 5))
         
-        tk.Label(self.controls, text="Difficulty (Depth):").pack(side=tk.LEFT, padx=(40, 5))
+        self.switch_btn = tk.Button(self.controls, text="Flip Sides", command=self.switch_sides, width=10)
+        self.switch_btn.pack(side=tk.LEFT, padx=(5, 20))
+        
+        tk.Label(self.controls, text="Difficulty (Depth):").pack(side=tk.LEFT, padx=(10, 5))
         self.diff_menu = tk.OptionMenu(self.controls, self.difficulty, 1, 2, 3, 4)
         self.diff_menu.pack(side=tk.LEFT)
         
@@ -103,6 +106,10 @@ class ChessGUI:
                     img = img.resize((70, 70), Image.Resampling.LANCZOS)
                     PIECE_IMAGES[(color, p_type)] = ImageTk.PhotoImage(img)
 
+    def switch_sides(self):
+        self.player_color = chess.BLACK if self.player_color == chess.WHITE else chess.WHITE
+        self.restart_game()
+
     def undo_move(self):
         if len(self.board.move_stack) >= 2:
             self.board.pop()
@@ -120,17 +127,25 @@ class ChessGUI:
         self.is_dragging = False
         self.clear_markup()
         self.draw_board()
+        if self.player_color == chess.BLACK:
+            self.root.after(50, self.engine_move)
         
     def clear_markup(self):
         self.highlights.clear()
         self.arrows.clear()
 
+    def get_square_from_grid(self, c, r):
+        if self.player_color == chess.BLACK:
+            return chess.square(7 - c, r)
+        else:
+            return chess.square(c, 7 - r)
+
     def get_square_from_event(self, event):
-        col = event.x // 80
-        row = event.y // 80
-        if col > 7 or row > 7: 
+        c = event.x // 80
+        r = event.y // 80
+        if c > 7 or r > 7: 
             return None
-        return chess.square(col, 7 - row)
+        return self.get_square_from_grid(c, r)
 
     def right_click_press(self, event):
         sq = self.get_square_from_event(event)
@@ -156,7 +171,9 @@ class ChessGUI:
 
     def left_click(self, event):
         self.clear_markup()
-        if self.board.turn == chess.BLACK or self.board.is_game_over():
+        
+        # Ensure it's our turn
+        if self.board.turn != self.player_color or self.board.is_game_over():
             self.draw_board()
             return
             
@@ -165,7 +182,7 @@ class ChessGUI:
             self.draw_board()
             return
         
-        if self.board.piece_at(sq) and self.board.color_at(sq) == chess.WHITE:
+        if self.board.piece_at(sq) and self.board.color_at(sq) == self.player_color:
             self.selected_sq = sq
             self.is_dragging = True
             self.drag_x = event.x
@@ -196,7 +213,9 @@ class ChessGUI:
     def attempt_move(self, from_sq, to_sq):
         move = chess.Move(from_sq, to_sq)
         if self.board.piece_at(from_sq) and self.board.piece_at(from_sq).piece_type == chess.PAWN:
-            if chess.square_rank(to_sq) == 7: 
+            if chess.square_rank(to_sq) == 7 and self.player_color == chess.WHITE: 
+                move = chess.Move(from_sq, to_sq, promotion=chess.QUEEN)
+            elif chess.square_rank(to_sq) == 0 and self.player_color == chess.BLACK:
                 move = chess.Move(from_sq, to_sq, promotion=chess.QUEEN)
                 
         if move in self.board.legal_moves:
@@ -214,6 +233,7 @@ class ChessGUI:
         depth = self.difficulty.get()
         self.undo_btn.config(state=tk.DISABLED)
         self.restart_btn.config(state=tk.DISABLED)
+        self.switch_btn.config(state=tk.DISABLED)
         self.diff_menu.config(state=tk.DISABLED)
         self.root.update()
         
@@ -223,6 +243,7 @@ class ChessGUI:
             
         self.undo_btn.config(state=tk.NORMAL)
         self.restart_btn.config(state=tk.NORMAL)
+        self.switch_btn.config(state=tk.NORMAL)
         self.diff_menu.config(state=tk.NORMAL)
         self.draw_board()
         if self.board.is_game_over():
@@ -256,7 +277,7 @@ class ChessGUI:
         
         for r in range(8):
             for c in range(8):
-                sq = chess.square(c, 7 - r)
+                sq = self.get_square_from_grid(c, r)
                 color_idx = (r + c) % 2
                 color = colors[color_idx]
                 
@@ -272,14 +293,16 @@ class ChessGUI:
                 
                 text_color = colors[1 - color_idx]
                 if c == 0:
-                    self.canvas.create_text(x0 + 8, y0 + 12, text=str(8 - r), fill=text_color, font=("Arial", 11, "bold"))
+                    rank_text = str(r + 1) if self.player_color == chess.BLACK else str(8 - r)
+                    self.canvas.create_text(x0 + 8, y0 + 12, text=rank_text, fill=text_color, font=("Arial", 11, "bold"))
                 if r == 7:
-                    self.canvas.create_text(x0 + 70, y0 + 68, text=chr(ord('a') + c), fill=text_color, font=("Arial", 11, "bold"))
+                    file_text = chr(ord('h') - c) if self.player_color == chess.BLACK else chr(ord('a') + c)
+                    self.canvas.create_text(x0 + 70, y0 + 68, text=file_text, fill=text_color, font=("Arial", 11, "bold"))
                 
         dragged_piece = None
         for r in range(8):
             for c in range(8):
-                sq = chess.square(c, 7 - r)
+                sq = self.get_square_from_grid(c, r)
                 x0, y0 = c * 80, r * 80
                 
                 piece = self.board.piece_at(sq)
@@ -299,8 +322,10 @@ class ChessGUI:
             for move in self.board.legal_moves:
                 if move.from_square == self.selected_sq:
                     to_sq = move.to_square
-                    c = chess.square_file(to_sq)
-                    r = 7 - chess.square_rank(to_sq)
+                    if self.player_color == chess.BLACK:
+                        c, r = 7 - chess.square_file(to_sq), chess.square_rank(to_sq)
+                    else:
+                        c, r = chess.square_file(to_sq), 7 - chess.square_rank(to_sq)
                     x = c * 80 + 40
                     y = r * 80 + 40
                     
@@ -310,8 +335,13 @@ class ChessGUI:
                         self.canvas.create_oval(x-12, y-12, x+12, y+12, fill="#888888", outline="")
 
         for start_sq, end_sq in self.arrows:
-            c1, r1 = chess.square_file(start_sq), 7 - chess.square_rank(start_sq)
-            c2, r2 = chess.square_file(end_sq), 7 - chess.square_rank(end_sq)
+            if self.player_color == chess.BLACK:
+                c1, r1 = 7 - chess.square_file(start_sq), chess.square_rank(start_sq)
+                c2, r2 = 7 - chess.square_file(end_sq), chess.square_rank(end_sq)
+            else:
+                c1, r1 = chess.square_file(start_sq), 7 - chess.square_rank(start_sq)
+                c2, r2 = chess.square_file(end_sq), 7 - chess.square_rank(end_sq)
+                
             x1, y1 = c1 * 80 + 40, r1 * 80 + 40
             x2, y2 = c2 * 80 + 40, r2 * 80 + 40
             self.canvas.create_line(x1, y1, x2, y2, fill="#ffaa00", width=6, arrow=tk.LAST, arrowshape=(16, 20, 6))
@@ -328,21 +358,34 @@ class ChessGUI:
             display_score = f"{abs(white_score)/100:.1f}"
             clamped = max(-1000, min(1000, white_score))
             
-        split_y = 320 - (clamped / 1000) * 320
+        # Determine Eval Bar colors and direction based on perspective
+        if self.player_color == chess.BLACK:
+            top_fill, bottom_fill = "#f0f0f0", "#333333"
+            top_text, bottom_text = "white", "black"
+            split_y = 320 + (clamped / 1000) * 320
+        else:
+            top_fill, bottom_fill = "#333333", "#f0f0f0"
+            top_text, bottom_text = "white", "black"
+            split_y = 320 - (clamped / 1000) * 320
         
-        self.canvas.create_rectangle(640, 0, 680, split_y, fill="#333333", outline="")
-        self.canvas.create_rectangle(640, split_y, 680, 640, fill="#f0f0f0", outline="")
+        self.canvas.create_rectangle(640, 0, 680, split_y, fill=top_fill, outline="")
+        self.canvas.create_rectangle(640, split_y, 680, 640, fill=bottom_fill, outline="")
         self.canvas.create_rectangle(640, 0, 680, 640, outline="gray")
         
+        # Evaluation Text
         if display_score == "M":
-            self.canvas.create_text(660, 620, text="M", fill="black", font=("Arial", 12, "bold"))
+            self.canvas.create_text(660, 620, text="M", fill=bottom_text, font=("Arial", 12, "bold"))
         elif display_score == "-M":
-            self.canvas.create_text(660, 20, text="M", fill="white", font=("Arial", 12, "bold"))
+            self.canvas.create_text(660, 20, text="M", fill=top_text, font=("Arial", 12, "bold"))
         else:
             if white_score > 0:
-                self.canvas.create_text(660, 620, text=f"+{display_score}", fill="black", font=("Arial", 10, "bold"))
+                y_pos = 620 if self.player_color == chess.WHITE else 20
+                color = bottom_text if self.player_color == chess.WHITE else top_text
+                self.canvas.create_text(660, y_pos, text=f"+{display_score}", fill=color, font=("Arial", 10, "bold"))
             elif white_score < 0:
-                self.canvas.create_text(660, 20, text=f"-{display_score}", fill="white", font=("Arial", 10, "bold"))
+                y_pos = 20 if self.player_color == chess.WHITE else 620
+                color = top_text if self.player_color == chess.WHITE else bottom_text
+                self.canvas.create_text(660, y_pos, text=f"-{display_score}", fill=color, font=("Arial", 10, "bold"))
             else:
                 self.canvas.create_text(660, 320, text="0.0", fill="gray", font=("Arial", 10, "bold"))
                 
