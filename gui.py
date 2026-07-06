@@ -80,7 +80,7 @@ class ChessGUI:
         self.history_scroll = tk.Scrollbar(self.right_frame)
         self.history_scroll.pack(side=tk.RIGHT, fill=tk.Y)
         
-        self.history_text = tk.Text(self.right_frame, width=22, height=35, yscrollcommand=self.history_scroll.set, state=tk.DISABLED, font=("Courier", 14), bg="#f8f9fa")
+        self.history_text = tk.Text(self.right_frame, width=22, height=35, yscrollcommand=self.history_scroll.set, state=tk.DISABLED, font=("Courier", 14), bg="#2b2b2b", fg="#d4d4d4")
         self.history_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         self.history_scroll.config(command=self.history_text.yview)
         
