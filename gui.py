@@ -22,9 +22,12 @@ PIECE_NAMES = {
 PIECE_IMAGES = {}
 
 class ChessGUI:
-    def __init__(self, root):
+    def __init__(self, root, mode="PvB"):
         self.root = root
-        self.root.title("Abdulazizxon's Chess Engine")
+        self.mode = mode
+        mode_title = "Play vs Bot" if mode == "PvB" else "2 Player Local" if mode == "PvP" else "Bot vs Bot Simulation"
+        self.root.title(f"Abdulazizxon's Chess Engine - {mode_title}")
+        
         self.board = chess.Board()
         self.selected_sq = None
         
@@ -36,8 +39,13 @@ class ChessGUI:
         self.arrows = set()
         self.drag_start_sq = None
         
-        self.difficulty = tk.IntVar(value=3)
+        # Mode specific variables
         self.player_color = chess.WHITE
+        self.difficulty = tk.IntVar(value=4)
+        self.bvb_white_depth = tk.IntVar(value=4)
+        self.bvb_black_depth = tk.IntVar(value=4)
+        self.bvb_running = False
+        self.bvb_paused = False
         
         # Root layout
         self.main_container = tk.Frame(self.root)
@@ -64,18 +72,32 @@ class ChessGUI:
         self.controls = tk.Frame(self.left_frame, pady=10)
         self.controls.pack(side=tk.BOTTOM, fill=tk.X)
         
-        self.undo_btn = tk.Button(self.controls, text="Undo", command=self.undo_move, width=8)
-        self.undo_btn.pack(side=tk.LEFT, padx=(5, 5))
+        self.undo_btn = tk.Button(self.controls, text="Undo", command=self.undo_move, width=6)
+        self.undo_btn.pack(side=tk.LEFT, padx=(2, 2))
         
-        self.restart_btn = tk.Button(self.controls, text="Restart", command=self.restart_game, width=8)
-        self.restart_btn.pack(side=tk.LEFT, padx=(5, 5))
+        self.restart_btn = tk.Button(self.controls, text="Restart", command=self.restart_game, width=6)
+        self.restart_btn.pack(side=tk.LEFT, padx=(2, 2))
         
-        self.switch_btn = tk.Button(self.controls, text="Flip Sides", command=self.switch_sides, width=10)
-        self.switch_btn.pack(side=tk.LEFT, padx=(5, 20))
-        
-        tk.Label(self.controls, text="Difficulty (Depth):").pack(side=tk.LEFT, padx=(10, 5))
-        self.diff_menu = tk.OptionMenu(self.controls, self.difficulty, 1, 2, 3, 4, 5, 6, 7, 8)
-        self.diff_menu.pack(side=tk.LEFT)
+        if self.mode == "PvB":
+            self.switch_btn = tk.Button(self.controls, text="Flip Sides", command=self.switch_sides, width=8)
+            self.switch_btn.pack(side=tk.LEFT, padx=(2, 10))
+            tk.Label(self.controls, text="Depth:").pack(side=tk.LEFT)
+            self.diff_menu = tk.OptionMenu(self.controls, self.difficulty, 1, 2, 3, 4, 5, 6, 7, 8)
+            self.diff_menu.pack(side=tk.LEFT)
+        elif self.mode == "PvP":
+            self.switch_btn = tk.Button(self.controls, text="Flip Board", command=self.switch_sides, width=8)
+            self.switch_btn.pack(side=tk.LEFT, padx=(2, 10))
+        elif self.mode == "BvB":
+            tk.Label(self.controls, text="W-Depth:").pack(side=tk.LEFT)
+            self.w_menu = tk.OptionMenu(self.controls, self.bvb_white_depth, 1, 2, 3, 4, 5, 6, 7, 8)
+            self.w_menu.pack(side=tk.LEFT)
+            
+            tk.Label(self.controls, text="B-Depth:").pack(side=tk.LEFT)
+            self.b_menu = tk.OptionMenu(self.controls, self.bvb_black_depth, 1, 2, 3, 4, 5, 6, 7, 8)
+            self.b_menu.pack(side=tk.LEFT)
+            
+            self.sim_btn = tk.Button(self.controls, text="Start Sim", command=self.toggle_sim, width=8)
+            self.sim_btn.pack(side=tk.LEFT, padx=(10, 5))
         
         # --- RIGHT FRAME (Move History) ---
         tk.Label(self.right_frame, text="Move History", font=("Arial", 16, "bold")).pack(pady=(0, 10))
@@ -90,10 +112,23 @@ class ChessGUI:
         self.load_images()
         self.draw_board()
 
+    def toggle_sim(self):
+        if not self.bvb_running:
+            self.bvb_running = True
+            self.bvb_paused = False
+            self.sim_btn.config(text="Pause Sim")
+            self.engine_move()
+        else:
+            self.bvb_paused = not self.bvb_paused
+            if self.bvb_paused:
+                self.sim_btn.config(text="Resume Sim")
+            else:
+                self.sim_btn.config(text="Pause Sim")
+                self.engine_move()
+
     def load_images(self):
         img_dir = os.path.join(os.path.dirname(__file__), "images")
         if not os.path.exists(img_dir):
-            print(f"Warning: images directory not found at {img_dir}")
             return
             
         for color in [chess.WHITE, chess.BLACK]:
@@ -108,14 +143,27 @@ class ChessGUI:
 
     def switch_sides(self):
         self.player_color = chess.BLACK if self.player_color == chess.WHITE else chess.WHITE
-        self.restart_game()
+        if self.mode == "PvB":
+            self.restart_game()
+        else:
+            self.draw_board()
 
     def undo_move(self):
-        if len(self.board.move_stack) >= 2:
-            self.board.pop()
-            self.board.pop()
-        elif len(self.board.move_stack) == 1:
-            self.board.pop()
+        if self.mode == "BvB":
+            self.bvb_paused = True
+            if self.bvb_running:
+                self.sim_btn.config(text="Resume Sim")
+        
+        if self.mode == "PvB":
+            if len(self.board.move_stack) >= 2:
+                self.board.pop()
+                self.board.pop()
+            elif len(self.board.move_stack) == 1:
+                self.board.pop()
+        else:
+            if len(self.board.move_stack) >= 1:
+                self.board.pop()
+                
         self.selected_sq = None
         self.is_dragging = False
         self.clear_markup()
@@ -125,9 +173,14 @@ class ChessGUI:
         self.board.reset()
         self.selected_sq = None
         self.is_dragging = False
+        self.bvb_running = False
+        self.bvb_paused = False
+        if self.mode == "BvB":
+            self.sim_btn.config(text="Start Sim")
+            
         self.clear_markup()
         self.draw_board()
-        if self.player_color == chess.BLACK:
+        if self.mode == "PvB" and self.player_color == chess.BLACK:
             self.root.after(50, self.engine_move)
         
     def clear_markup(self):
@@ -170,10 +223,17 @@ class ChessGUI:
         self.draw_board()
 
     def left_click(self, event):
+        if self.mode == "BvB":
+            return # No dragging in Bot vs Bot
+            
         self.clear_markup()
         
-        # Ensure it's our turn
-        if self.board.turn != self.player_color or self.board.is_game_over():
+        if self.mode == "PvB":
+            if self.board.turn != self.player_color or self.board.is_game_over():
+                self.draw_board()
+                return
+                
+        if self.board.is_game_over():
             self.draw_board()
             return
             
@@ -182,7 +242,8 @@ class ChessGUI:
             self.draw_board()
             return
         
-        if self.board.piece_at(sq) and self.board.color_at(sq) == self.player_color:
+        color_to_move = self.board.turn
+        if self.board.piece_at(sq) and self.board.color_at(sq) == color_to_move:
             self.selected_sq = sq
             self.is_dragging = True
             self.drag_x = event.x
@@ -213,9 +274,9 @@ class ChessGUI:
     def attempt_move(self, from_sq, to_sq):
         move = chess.Move(from_sq, to_sq)
         if self.board.piece_at(from_sq) and self.board.piece_at(from_sq).piece_type == chess.PAWN:
-            if chess.square_rank(to_sq) == 7 and self.player_color == chess.WHITE: 
+            if chess.square_rank(to_sq) == 7 and self.board.turn == chess.WHITE: 
                 move = chess.Move(from_sq, to_sq, promotion=chess.QUEEN)
-            elif chess.square_rank(to_sq) == 0 and self.player_color == chess.BLACK:
+            elif chess.square_rank(to_sq) == 0 and self.board.turn == chess.BLACK:
                 move = chess.Move(from_sq, to_sq, promotion=chess.QUEEN)
                 
         if move in self.board.legal_moves:
@@ -225,16 +286,37 @@ class ChessGUI:
             self.root.update()
             
             if not self.board.is_game_over():
-                self.root.after(50, self.engine_move)
+                if self.mode == "PvB":
+                    self.root.after(50, self.engine_move)
             return True
         return False
 
     def engine_move(self):
-        depth = self.difficulty.get()
+        if self.board.is_game_over():
+            self.bvb_running = False
+            if self.mode == "BvB": self.sim_btn.config(text="Start Sim", state=tk.NORMAL)
+            self.draw_board()
+            return
+            
+        if self.mode == "BvB" and self.bvb_paused:
+            self.sim_btn.config(state=tk.NORMAL)
+            return
+            
+        if self.mode == "PvP":
+            return
+            
+        if self.mode == "BvB":
+            depth = self.bvb_white_depth.get() if self.board.turn == chess.WHITE else self.bvb_black_depth.get()
+            self.sim_btn.config(state=tk.DISABLED)
+            self.w_menu.config(state=tk.DISABLED)
+            self.b_menu.config(state=tk.DISABLED)
+        else:
+            depth = self.difficulty.get()
+            self.switch_btn.config(state=tk.DISABLED)
+            self.diff_menu.config(state=tk.DISABLED)
+            
         self.undo_btn.config(state=tk.DISABLED)
         self.restart_btn.config(state=tk.DISABLED)
-        self.switch_btn.config(state=tk.DISABLED)
-        self.diff_menu.config(state=tk.DISABLED)
         self.root.update()
         
         move = get_best_move(self.board, depth=depth)
@@ -243,11 +325,23 @@ class ChessGUI:
             
         self.undo_btn.config(state=tk.NORMAL)
         self.restart_btn.config(state=tk.NORMAL)
-        self.switch_btn.config(state=tk.NORMAL)
-        self.diff_menu.config(state=tk.NORMAL)
+        
+        if self.mode == "BvB":
+            self.sim_btn.config(state=tk.NORMAL)
+            self.w_menu.config(state=tk.NORMAL)
+            self.b_menu.config(state=tk.NORMAL)
+        elif self.mode == "PvB":
+            self.switch_btn.config(state=tk.NORMAL)
+            self.diff_menu.config(state=tk.NORMAL)
+            
         self.draw_board()
         if self.board.is_game_over():
+            self.bvb_running = False
+            if self.mode == "BvB": self.sim_btn.config(text="Start Sim")
             print("Game Over:", self.board.result())
+        else:
+            if self.mode == "BvB" and not self.bvb_paused:
+                self.root.after(50, self.engine_move)
 
     def update_move_history(self):
         self.history_text.config(state=tk.NORMAL)
@@ -358,7 +452,6 @@ class ChessGUI:
             display_score = f"{abs(white_score)/100:.1f}"
             clamped = max(-1000, min(1000, white_score))
             
-        # Determine Eval Bar colors and direction based on perspective
         if self.player_color == chess.BLACK:
             top_fill, bottom_fill = "#f0f0f0", "#333333"
             top_text, bottom_text = "white", "black"
@@ -372,7 +465,6 @@ class ChessGUI:
         self.canvas.create_rectangle(640, split_y, 680, 640, fill=bottom_fill, outline="")
         self.canvas.create_rectangle(640, 0, 680, 640, outline="gray")
         
-        # Evaluation Text
         if display_score == "M":
             self.canvas.create_text(660, 620, text="M", fill=bottom_text, font=("Arial", 12, "bold"))
         elif display_score == "-M":
@@ -399,11 +491,35 @@ class ChessGUI:
                 
         self.update_move_history()
 
+
+app_state = {"mode": None}
+
+class StartupMenu:
+    def __init__(self, r):
+        self.r = r
+        self.r.title("Chess Engine Menu")
+        self.r.geometry("400x400")
+        tk.Label(r, text="Select Game Mode", font=("Arial", 24, "bold")).pack(pady=40)
+        tk.Button(r, text="Play vs Bot", font=("Arial", 16), width=20, height=2, command=lambda: self.launch("PvB")).pack(pady=10)
+        tk.Button(r, text="2 Player Local", font=("Arial", 16), width=20, height=2, command=lambda: self.launch("PvP")).pack(pady=10)
+        tk.Button(r, text="Bot vs Bot Simulation", font=("Arial", 16), width=20, height=2, command=lambda: self.launch("BvB")).pack(pady=10)
+        
+    def launch(self, mode):
+        app_state["mode"] = mode
+        self.r.destroy()
+
 if __name__ == "__main__":
     root = tk.Tk()
     root.lift()
     root.attributes('-topmost', True)
     root.after_idle(root.attributes, '-topmost', False)
-    
-    gui = ChessGUI(root)
+    menu = StartupMenu(root)
     root.mainloop()
+    
+    if app_state["mode"] is not None:
+        game_root = tk.Tk()
+        game_root.lift()
+        game_root.attributes('-topmost', True)
+        game_root.after_idle(game_root.attributes, '-topmost', False)
+        gui = ChessGUI(game_root, mode=app_state["mode"])
+        game_root.mainloop()
