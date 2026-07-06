@@ -1,6 +1,7 @@
 import tkinter as tk
 import chess
 import os
+import time
 from search import get_best_move
 from evaluate import evaluate
 from PIL import Image, ImageTk
@@ -125,9 +126,16 @@ class ChessGUI:
             
             self.sim_btn = tk.Button(self.controls, text="Start Sim", command=self.toggle_sim, width=8)
             self.sim_btn.pack(side=tk.LEFT, padx=(10, 5))
+            
+        self.coach_enabled = tk.BooleanVar(value=False)
+        self.coach_check = tk.Checkbutton(self.controls, text="Aura Coach", variable=self.coach_enabled, font=("Arial", 12, "bold"), fg="#ff4757")
+        self.coach_check.pack(side=tk.LEFT, padx=(10, 5))
         
         # --- RIGHT FRAME (Move History) ---
-        tk.Label(self.right_frame, text="Move History", font=("Arial", 16, "bold")).pack(pady=(0, 5))
+        self.top_clock_lbl = tk.Label(self.right_frame, text="10:00", font=("Helvetica", 36, "bold"), bg="#1a1a1a", fg="white", pady=10)
+        self.top_clock_lbl.pack(side=tk.TOP, fill=tk.X, pady=(0, 10))
+        
+        tk.Label(self.right_frame, text="Move History", font=("Arial", 16, "bold"), bg="#2b2b2b", fg="white").pack(pady=(0, 5))
         
         self.opening_label = tk.Label(self.right_frame, text="Starting Position", font=("Arial", 12, "italic"), fg="#a0a0a0")
         self.opening_label.pack(pady=(0, 10))
@@ -141,6 +149,15 @@ class ChessGUI:
         
         self.nav_frame = tk.Frame(self.right_frame, bg="#2b2b2b")
         self.nav_frame.pack(fill=tk.X, pady=(5, 0), side=tk.BOTTOM)
+        
+        self.bottom_clock_lbl = tk.Label(self.right_frame, text="10:00", font=("Helvetica", 36, "bold"), bg="#1a1a1a", fg="white", pady=10)
+        self.bottom_clock_lbl.pack(side=tk.BOTTOM, fill=tk.X, pady=(10, 0))
+        
+        self.white_time = 600.0
+        self.black_time = 600.0
+        self.clock_running = False
+        self.last_time = time.time()
+        self.update_clock()
         
         self.prev_btn = tk.Button(self.nav_frame, text="<", command=self.view_prev, width=5)
         self.prev_btn.pack(side=tk.LEFT, padx=(10, 5), pady=5)
@@ -319,6 +336,12 @@ class ChessGUI:
         self.bvb_running = False
         self.bvb_paused = False
         self.view_index = -1
+        self.white_time = 600.0
+        self.black_time = 600.0
+        self.clock_running = False
+        if hasattr(self, 'update_clock_labels'):
+            self.update_clock_labels()
+            
         if self.mode == "BvB":
             self.sim_btn.config(text="Start Sim")
             
@@ -427,8 +450,26 @@ class ChessGUI:
             elif chess.square_rank(to_sq) == 0 and self.board.turn == chess.BLACK:
                 move = chess.Move(from_sq, to_sq, promotion=chess.QUEEN)
                 
-        if move in self.board.legal_moves:
+        legal_moves = self.board.legal_moves
+        if move in legal_moves:
+            if self.coach_enabled.get():
+                from quiescence import quiescence_search
+                import os
+                score_before = quiescence_search(self.board, -99999, 99999)
+                temp = self.board.copy()
+                temp.push(move)
+                score_after = -quiescence_search(temp, -99999, 99999)
+                
+                if score_after < score_before - 250:
+                    os.system('say "Watch out, that drops material!" &')
+                    self.show_blunder_warning()
+                    self.selected_sq = None
+                    self.draw_board()
+                    return False
+                    
             self.board.push(move)
+            self.update_move_history()
+            self.start_clock()
             self.selected_sq = None
             self.view_index = -1
             self.draw_board()
@@ -519,6 +560,7 @@ class ChessGUI:
             
         if move and move in self.board.legal_moves:
             self.board.push(move)
+            self.start_clock()
             
         if self.mode == "BvB":
             self.sim_btn.config(state=tk.NORMAL)
@@ -729,6 +771,57 @@ class ChessGUI:
 
 
 
+
+    def start_clock(self):
+        if not self.clock_running and self.mode in ["PvB", "PvM", "PvP"]:
+            self.clock_running = True
+            self.last_time = time.time()
+            
+    def update_clock(self):
+        if self.board.is_game_over(claim_draw=True) or not self.clock_running:
+            self.root.after(100, self.update_clock)
+            return
+            
+        now = time.time()
+        dt = now - self.last_time
+        self.last_time = now
+        
+        if self.board.turn == chess.WHITE:
+            self.white_time -= dt
+            if self.white_time <= 0:
+                self.white_time = 0
+                self.clock_running = False
+                self.game_over("Black wins on time!")
+        else:
+            self.black_time -= dt
+            if self.black_time <= 0:
+                self.black_time = 0
+                self.clock_running = False
+                self.game_over("White wins on time!")
+                
+        self.update_clock_labels()
+        self.root.after(100, self.update_clock)
+        
+    def update_clock_labels(self):
+        def format_time(t):
+            m = int(t) // 60
+            s = int(t) % 60
+            return f"{m:02d}:{s:02d}"
+            
+        w_text = format_time(self.white_time)
+        b_text = format_time(self.black_time)
+        
+        if self.player_color == chess.WHITE:
+            self.bottom_clock_lbl.config(text=w_text)
+            self.top_clock_lbl.config(text=b_text)
+        else:
+            self.bottom_clock_lbl.config(text=b_text)
+            self.top_clock_lbl.config(text=w_text)
+            
+    def show_blunder_warning(self):
+        self.canvas.create_rectangle(120, 260, 520, 380, fill="#2b2b2b", outline="#ff4757", width=4, tags="blunder_warning")
+        self.canvas.create_text(320, 320, text="Aura Coach:\\nBlunder Prevented!", fill="#ff4757", font=("Helvetica", 28, "bold"), justify="center", tags="blunder_warning")
+        self.root.after(2000, lambda: self.canvas.delete("blunder_warning"))
 
 app_state = {"mode": None}
 
