@@ -1,11 +1,11 @@
 import chess
 import chess.polyglot
 import os
-from evaluate import evaluate
-from quiescence import quiescence_search
-from ordering import order_moves
+from engine.evaluate import evaluate
+from engine.quiescence import quiescence_search
+from engine.ordering import order_moves
 
-BOOK_PATH = os.path.join(os.path.dirname(__file__), "data", "komodo.bin")
+BOOK_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "komodo.bin")
 
 # Transposition Table: stores {zobrist_hash: (depth, flag, score, best_move)}
 # flags: 0 = EXACT, 1 = ALPHA (upperbound), 2 = BETA (lowerbound)

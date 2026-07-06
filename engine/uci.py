@@ -1,6 +1,6 @@
 import sys
 import chess
-from search import get_best_move
+from engine.search import get_best_move
 
 def uci_loop():
     board = chess.Board()

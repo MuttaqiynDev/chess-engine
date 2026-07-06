@@ -1,4 +1,4 @@
-from evaluate import evaluate
+from engine.evaluate import evaluate
 
 cpdef int quiescence_search(board, int alpha, int beta):
     cdef int stand_pat = evaluate(board)

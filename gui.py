@@ -2,8 +2,8 @@ import tkinter as tk
 import chess
 import os
 import time
-from search import get_best_move
-from evaluate import evaluate
+from engine.search import get_best_move
+from engine.evaluate import evaluate
 from PIL import Image, ImageTk
 
 UNICODE_PIECES = {
@@ -192,7 +192,7 @@ class ChessGUI:
             return
             
         def calc():
-            from search import get_best_move
+            from engine.search import get_best_move
             move = get_best_move(self.board.copy(), depth=4)
             if move:
                 self.root.after(0, lambda: self.draw_arrow(move))
@@ -475,7 +475,7 @@ class ChessGUI:
                 return False
                 
             if self.coach_enabled.get():
-                from quiescence import quiescence_search
+                from engine.quiescence import quiescence_search
                 import os
                 score_before = quiescence_search(self.board, -99999, 99999)
                 temp = self.board.copy()

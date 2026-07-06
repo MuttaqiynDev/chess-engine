@@ -173,7 +173,7 @@ class AnalyzerFrame(ctk.CTkFrame):
             
     def analyze(self, path):
         import chess.pgn
-        from evaluate import evaluate
+        from engine.evaluate import evaluate
         scores = []
         with open(path, "r") as f:
             game = chess.pgn.read_game(f)

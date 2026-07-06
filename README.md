@@ -8,7 +8,7 @@ A fully-functional, ultra-fast Python chess engine powered by Cython C-extension
 
 ## Features
 
-### 🚀 Aura Auto-Trainer (Spaced Repetition)
+###  Aura Auto-Trainer (Spaced Repetition)
 The app features an offline Spaced Repetition engine that mines your actual game history and tests you on your blunders.
 * **The Intelligence Miner**: Downloads your recent games from Chess.com and cross-references your opening moves against the offline `komodo.bin` Grandmaster Opening Book.
 * **Personalized Flashcards**: Automatically detects if you play a move that violates Grandmaster theory, isolating that exact position and generating a personalized flashcard.
@@ -19,7 +19,7 @@ The app features an offline Spaced Repetition engine that mines your actual game
 * **Algorithmic Intelligence**: Implements Alpha-Beta Negamax search, MVV-LVA move ordering, and Quiescence Search to prevent horizon-effect blunders.
 * **Positional Mastery**: Uses PeSTO's Piece-Square Tables for strong positional and developmental understanding.
 
-### 🎨 Modern Dashboard GUI
+###  Modern Dashboard GUI
 * Built natively in `customtkinter` with a dark mode, premium aesthetic.
 * **PGN Analyzer**: Paste PGNs to analyze games against the Cython engine.
 * **Move History & Real-Time Eval**: Scrollable history with standard algebraic notation and dynamic evaluation bars showing real-time engine advantage.
