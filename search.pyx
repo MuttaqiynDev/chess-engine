@@ -14,6 +14,13 @@ cdef dict TT = {}
 cdef tuple negamax(board, int depth, int alpha, int beta):
     cdef int original_alpha = alpha
     cdef int hash_key = chess.polyglot.zobrist_hash(board)
+    cdef int best_val = -999999
+    cdef int val
+    cdef int flag
+    cdef bint last_was_null = False
+    
+    if len(board.move_stack) > 0 and board.move_stack[-1] == chess.Move.null():
+        last_was_null = True
     
     # 1. Transposition Table Lookup
     if hash_key in TT:
@@ -36,9 +43,7 @@ cdef tuple negamax(board, int depth, int alpha, int beta):
         return quiescence_search(board, alpha, beta), None
         
     # 2. Null Move Pruning
-    # If we skip a turn and the opponent STILL can't break our beta score,
-    # the position is too good and we can cut this branch immediately.
-    if depth >= 3 and not board.is_check():
+    if depth >= 3 and not board.is_check() and not last_was_null:
         board.push(chess.Move.null())
         val, _ = negamax(board, depth - 1 - 2, -beta, -beta + 1)
         val = -val
@@ -46,11 +51,14 @@ cdef tuple negamax(board, int depth, int alpha, int beta):
         if val >= beta:
             return beta, None
 
-    cdef int best_val = -999999
-    cdef int val
     best_move = None
-    
     moves = order_moves(board, board.legal_moves)
+    
+    if not moves:
+        return -999999, None
+        
+    # Fallback to first move in case of massive Alpha cutoffs
+    best_move = moves[0]
     
     for move in moves:
         board.push(move)
@@ -69,7 +77,6 @@ cdef tuple negamax(board, int depth, int alpha, int beta):
             break
             
     # 3. Transposition Table Store
-    cdef int flag
     if best_val <= original_alpha:
         flag = 1 # ALPHA
     elif best_val >= beta:
@@ -83,7 +90,6 @@ cdef tuple negamax(board, int depth, int alpha, int beta):
 
 cpdef get_best_move(board, int depth=4):
     global TT
-    # Prevent memory bloat from previous deep searches
     if len(TT) > 2000000:
         TT.clear()
         
