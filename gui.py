@@ -600,6 +600,16 @@ class ChessGUI:
                 char = UNICODE_PIECES[dragged_piece.symbol()]
                 self.canvas.create_text(self.drag_x, self.drag_y, text=char, font=("Arial", 60), fill="black")
                 
+        if self.board.is_game_over(claim_draw=True) and self.view_index == -1:
+            result = self.board.result(claim_draw=True)
+            text = "DRAW"
+            if result == "1-0":
+                text = "WHITE WINS"
+            elif result == "0-1":
+                text = "BLACK WINS"
+            self.canvas.create_rectangle(140, 280, 500, 360, fill="#2b2b2b", outline="gray", width=3)
+            self.canvas.create_text(320, 320, text=text, font=("Arial", 36, "bold"), fill="#d4d4d4")
+                
         self.update_move_history()
 
 
