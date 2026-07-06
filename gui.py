@@ -76,12 +76,8 @@ class ChessGUI:
         self.right_frame.pack(side=tk.RIGHT, fill=tk.Y, padx=10, pady=10)
         
         # --- LEFT FRAME (Board + Controls) ---
-        # Eval Bar
-        self.eval_canvas = tk.Canvas(self.left_frame, width=20, height=480, bg="#2b2b2b", highlightthickness=1, highlightbackground="#555")
-        self.eval_canvas.pack(side=tk.LEFT, padx=(20, 0), pady=20)
-        
-        self.canvas = tk.Canvas(self.left_frame, width=480, height=480, bg="#d4d4d4", highlightthickness=0)
-        self.canvas.pack(side=tk.LEFT, padx=20, pady=20)
+        self.canvas = tk.Canvas(self.left_frame, width=680, height=640, bg="#d4d4d4", highlightthickness=0)
+        self.canvas.pack(side=tk.TOP, pady=20)
         
         self.canvas.bind("<Button-1>", self.left_click)
         self.canvas.bind("<B1-Motion>", self.drag_motion)
@@ -182,7 +178,7 @@ class ChessGUI:
         self.canvas.delete("hint_arrow")
         if not move: return
         
-        sq_size = 60
+        sq_size = 80
         f_col = chess.square_file(move.from_square)
         f_row = 7 - chess.square_rank(move.from_square)
         t_col = chess.square_file(move.to_square)
@@ -586,7 +582,6 @@ class ChessGUI:
     def draw_board(self):
         self.canvas.delete("all")
         view_board = self.get_view_board()
-        self.update_eval_bar(view_board)
         
         opening_name = self.get_opening_name()
         self.opening_label.config(text=opening_name)
@@ -732,29 +727,7 @@ class ChessGUI:
                 
         self.update_move_history()
 
-    def update_eval_bar(self, temp_board):
-        self.eval_canvas.delete("all")
-        from evaluate import evaluate
-        score = evaluate(temp_board)
-        
-        white_score = score if temp_board.turn == chess.WHITE else -score
-        clamped = max(-500, min(500, white_score))
-        ratio = 0.5 + (clamped / 1000)
-        
-        if temp_board.is_checkmate():
-            ratio = 1.0 if temp_board.result() == "1-0" else 0.0
-        elif temp_board.is_game_over() or temp_board.can_claim_draw():
-            ratio = 0.5
-            
-        white_height = 480 * ratio
-        
-        self.eval_canvas.create_rectangle(0, 0, 20, 480, fill="#2b2b2b", outline="")
-        self.eval_canvas.create_rectangle(0, 480 - white_height, 20, 480, fill="#f0f0f0", outline="")
-        
-        y_pos = 480 - white_height
-        if y_pos < 10: y_pos = 10
-        if y_pos > 470: y_pos = 470
-        self.eval_canvas.create_line(0, y_pos, 20, y_pos, fill="#ff4757", width=2)
+
 
 
 app_state = {"mode": None}
