@@ -655,7 +655,7 @@ class ChessGUI:
         else:
             self.nav_label.config(text=f"Move {self.view_index} / {len(self.board.move_stack)}")
             
-        colors = ["#eeeed2", "#769656"]
+        colors = ["#f0d9b5", "#b58863"]
         highlight_colors = ["#eb6150", "#ca3d30"]
         select_colors = ["#f6f669", "#baca44"]
         
