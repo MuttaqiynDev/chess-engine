@@ -64,3 +64,12 @@ To update your Spaced Repetition flashcards with your latest games:
 ```bash
 python3 theory_analyzer.py
 ```
+
+## Acknowledgements
+
+A huge thank you to the following resources and communities that made this project possible:
+
+* **Chess.com**: For the beautiful chess piece images used in the GUI, and for providing the platform to download player game history.
+* **Komodo Chess Engine**: For the `komodo.bin` Grandmaster Opening Book used for theoretical move validation.
+* **PeSTO**: For the Piece-Square Tables used to give the engine its strong positional understanding.
+* **python-chess & customtkinter**: For the excellent open-source libraries that helped power the logic and GUI.
