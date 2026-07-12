@@ -821,8 +821,11 @@ class ChessGUI:
                 self.clock_running = False
                 self.game_over("White wins on time!")
                 
-        self.update_clock_labels()
-        self.root.after(100, self.update_clock)
+        try:
+            self.update_clock_labels()
+            self.root.after(100, self.update_clock)
+        except Exception:
+            self.clock_running = False
         
     def update_clock_labels(self):
         def format_time(t):
