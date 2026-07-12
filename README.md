@@ -65,6 +65,9 @@ To update your Spaced Repetition flashcards with your latest games:
 python3 theory_analyzer.py
 ```
 
+## 🔬 Experimental: Pure Cython Bitboards
+We have laid the foundation for a pure C-level Bitboard engine (`engine/bitboard_core.pyx`). This completely bypasses the `python-chess` bottleneck by utilizing native 64-bit integer mathematics for blazing-fast board representations. It is currently in active development.
+
 ## Acknowledgements
 
 A huge thank you to the following resources and communities that made this project possible:

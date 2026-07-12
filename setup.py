@@ -3,7 +3,7 @@ from Cython.Build import cythonize
 
 setup(
     ext_modules = cythonize(
-        ["engine/evaluate.pyx", "engine/ordering.pyx", "engine/quiescence.pyx", "engine/search.pyx"],
+        ["engine/evaluate.pyx", "engine/ordering.pyx", "engine/quiescence.pyx", "engine/search.pyx", "engine/bitboard_core.pyx"],
         compiler_directives={'language_level': "3"}
     )
 )
